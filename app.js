@@ -4,7 +4,7 @@
 /* const GDRIVE_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRRfCI2jZaiIncwd9H8Edmgov8VWTKaMAd27my9FgecSF_UuAJAp-vVmM8JZJygpdXUJEV-uK2wdwmL/pub?output=csv'; */
 const CSV_SOURCES = {
   'AI-Gen': 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRRfCI2jZaiIncwd9H8Edmgov8VWTKaMAd27my9FgecSF_UuAJAp-vVmM8JZJygpdXUJEV-uK2wdwmL/pub?output=csv',
-  'Tatoeba': 'https://YOUR_TATOEBA_URL',
+  'Tatoeba': 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSUMyF0rL-GOHZQY0sbPlqVOK4LPr5OZUE_HmfIG3dgA1WxDGcwV0mGhqZ48MiX57HQTc_uMKNKNitK/pub?gid=1332995818&single=true&output=csv',
   'Europarl': 'https://YOUR_EUROPARL_URL'
 };
 
