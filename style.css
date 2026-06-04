@@ -385,16 +385,23 @@ a, button, [role="button"], .card, .chip, .theme-dot, .toggle, .ctrl-btn, .bar-b
     flex-direction:column;height:auto;padding:10px 14px;gap:0;align-items:stretch;
   }
   #hamburger-btn{display:flex;}
-#topbar-drawer {
-  display: flex; flex-direction: column; gap: 10px; padding-top: 0;
-  max-height: 0; opacity: 0; overflow: hidden;
-  transition: opacity 200ms ease, max-height 250ms ease, padding-top 200ms ease;
-}
-#topbar-drawer.open {
-  max-height: 200px; padding-top: 10px; opacity: 1; overflow: visible;
-}
-#topbar-drawer .tb-group:first-child{justify-content:flex-end;}
-#topbar-drawer .tb-group:last-child{justify-content:flex-end;}
+  #topbar-drawer {
+    display: flex; flex-direction: column; gap: 10px; padding-top: 0;
+    max-height: 0; opacity: 0; overflow: hidden;
+    transition: opacity 200ms ease, max-height 250ms ease, padding-top 200ms ease;
+  }
+  #topbar-drawer.open {
+    max-height: 200px; padding-top: 10px; opacity: 1; overflow: visible;
+  }
+  #topbar-drawer .tb-group:first-child{
+    order: 2;
+    justify-content: flex-end;
+  }
+
+  #topbar-drawer .tb-group:last-child{
+    order: 1;
+    justify-content: flex-end;
+  }
   .tb-spacer{display:none}
   .tb-group{width:100%;justify-content:flex-start;gap:8px;}
   .tb-group:last-child{justify-content:flex-end;}
