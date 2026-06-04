@@ -4,7 +4,7 @@
 /* const GDRIVE_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRRfCI2jZaiIncwd9H8Edmgov8VWTKaMAd27my9FgecSF_UuAJAp-vVmM8JZJygpdXUJEV-uK2wdwmL/pub?output=csv'; */
 const CSV_SOURCES = {
   'AI-Gen': 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRRfCI2jZaiIncwd9H8Edmgov8VWTKaMAd27my9FgecSF_UuAJAp-vVmM8JZJygpdXUJEV-uK2wdwmL/pub?output=csv',
-  'Tatoeba': 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSUMyF0rL-GOHZQY0sbPlqVOK4LPr5OZUE_HmfIG3dgA1WxDGcwV0mGhqZ48MiX57HQTc_uMKNKNitK/pub?gid=1332995818&single=true&output=csv',
+  'Tatoeba': 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRD8fgJcB0Iy2LMjQuRH1pVYeYnqWQu-JBy2eYilqz7EbwPFW99-bL5yaPzHaO2NpEYsKqmAq8H2zLx/pub?output=csv',
   'Europarl': 'https://YOUR_EUROPARL_URL'
 };
 
@@ -156,13 +156,35 @@ function splitCSV(line) {
   r.push(cur); return r;
 }
 function parseCSV(text) {
-  const lines = text.trim().split(/\r?\n/);
-  const hdr = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/^\uFEFF/, ''));
-  return lines.slice(1).map(l => {
-    const cols = splitCSV(l), row = {};
-    hdr.forEach((h, i) => row[h] = (cols[i] || '').trim().replace(/^"|"$/g, '').trim());
-    return row;
-  }).filter(r => r.language && r.level && r.english && r.translation && r.category);
+  const result = Papa.parse(text, {
+    header: true,
+    skipEmptyLines: true
+  });
+
+  return result.data
+    .map(row => {
+      const clean = {};
+
+      Object.entries(row).forEach(([k, v]) => {
+        const key = String(k)
+          .trim()
+          .toLowerCase()
+          .replace(/^\uFEFF/, '');
+
+        clean[key] = typeof v === 'string'
+          ? v.trim()
+          : v;
+      });
+
+      return clean;
+    })
+    .filter(r =>
+      r.language &&
+      r.level &&
+      r.english &&
+      r.translation &&
+      r.category
+    );
 }
 
 /* ── Load CSV ────────────────────────────────────────────── */
