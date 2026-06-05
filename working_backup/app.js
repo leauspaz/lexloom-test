@@ -265,8 +265,7 @@ function buildLevelDropdown() {
 }
 
 function buildSrcDropdown() {
-  /* const sources = ['AI-Gen', 'Tatoeba', 'Europarl']; */
-  const sources = ['AI-Gen', 'Tatoeba'];
+  const sources = ['AI-Gen', 'Tatoeba', 'Europarl'];
 
   makeDropdown('src-dropdown', sources, S.source, async val => {
     if (val === S.source) return;

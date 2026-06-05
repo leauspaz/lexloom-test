@@ -1,7 +1,6 @@
 'use strict';
 
 /* ── CSV source ─────────────────────────────────────────── */
-/* const GDRIVE_CSV = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRRfCI2jZaiIncwd9H8Edmgov8VWTKaMAd27my9FgecSF_UuAJAp-vVmM8JZJygpdXUJEV-uK2wdwmL/pub?output=csv'; */
 const CSV_SOURCES = {
   'AI-Gen': 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRRfCI2jZaiIncwd9H8Edmgov8VWTKaMAd27my9FgecSF_UuAJAp-vVmM8JZJygpdXUJEV-uK2wdwmL/pub?output=csv',
   'Tatoeba': 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRD8fgJcB0Iy2LMjQuRH1pVYeYnqWQu-JBy2eYilqz7EbwPFW99-bL5yaPzHaO2NpEYsKqmAq8H2zLx/pub?output=csv',
@@ -11,14 +10,16 @@ const CSV_SOURCES = {
 /* ── State ──────────────────────────────────────────────── */
 const S = {
   allRows: [], filtered: [], pool: [], poolIndex: 0,
-  languages: [], categories: [],
-  lang: 'All', level: 'All', categories_sel: ['All'],
+  languages: [],
+  lang: 'All', level: 'All',
   source: 'AI-Gen',
   autoPlay: true, presMode: false, presRevealed: false,
   creatorFlip: 'mix', currentFlip: false, flipMap: {}, revealed: false, randomize: true,
   theme: 'latte', fontSize: 22,
   keyReveal: ' ', keyNext: 'ArrowRight', keyPrev: 'ArrowLeft', keyTTS: 's',
   customVars: {}, ttsVoice: '',
+  browseMode: 'topic',       // 'topic' | 'grammar' | 'tense' | 'misc'
+  filterValues: ['All'],     // array of active chip values
 };
 
 const COLOR_VARS = [
@@ -34,6 +35,14 @@ const COLOR_VARS = [
   { key: '--card-border', label: 'Card Border' },
 ];
 
+/* ── Misc filter definitions ─────────────────────────────── */
+const MISC_FILTERS = [
+  { label: 'Two Way Prep Only', col: 'has_two_way_prep' },
+  { label: 'Separable Verbs Only', col: 'separable_verb' },
+  { label: 'Reflexive Verb Only', col: 'reflexive_verb' },
+  { label: 'Genitive Only', col: 'genitive_attr' },
+];
+
 /* ── DOM ─────────────────────────────────────────────────── */
 const $ = id => document.getElementById(id);
 const $$ = sel => document.querySelectorAll(sel);
@@ -41,7 +50,6 @@ const $$ = sel => document.querySelectorAll(sel);
 $('hamburger-btn').addEventListener('click', () => {
   $('topbar-drawer').classList.toggle('open');
 });
-
 
 $$('#font-btns .font-btn').forEach(b => b.addEventListener('click', () => {
   S.fontFamily = b.dataset.font;
@@ -57,6 +65,42 @@ $$('#font-btns .font-btn').forEach(b => b.addEventListener('click', () => {
   saveSettings();
 }));
 
+/* ── Browse items per mode ───────────────────────────────── */
+function getBrowseItems() {
+  switch (S.browseMode) {
+
+    case 'topic':
+      return [...new Set(
+        S.allRows.map(r => r.category).filter(Boolean)
+      )].sort();
+
+    case 'grammar':
+      return [...new Set(
+        S.allRows.flatMap(r =>
+          (r.grammar || '')
+            .split('|')
+            .map(x => x.trim())
+            .filter(Boolean)
+        )
+      )].sort();
+
+    case 'tense':
+      return [...new Set(
+        S.allRows.map(r => r.tense).filter(Boolean)
+      )].sort();
+
+    case 'misc':
+      // Only show misc options that actually have matching rows
+      return MISC_FILTERS
+        .filter(f => S.allRows.some(r =>
+          String(r[f.col]).toLowerCase() === 'true'
+        ))
+        .map(f => f.label);
+
+    default:
+      return [];
+  }
+}
 
 /* ── Cursor (GSAP) ──────────────────────────────────────── */
 function initCursor() {
@@ -112,7 +156,6 @@ function makeDropdown(containerId, options, current, onChange) {
   btn.addEventListener('click', e => {
     e.stopPropagation();
     const isOpen = list.classList.contains('open');
-    // close all open dropdowns first
     $$('.custom-select-list.open').forEach(l => l.classList.remove('open'));
     $$('.custom-select-btn.open').forEach(b => b.classList.remove('open'));
     if (!isOpen) { list.classList.add('open'); btn.classList.add('open'); }
@@ -122,7 +165,6 @@ function makeDropdown(containerId, options, current, onChange) {
   wrap.appendChild(list);
 }
 
-// close dropdowns when clicking outside
 document.addEventListener('click', () => {
   $$('.custom-select-list.open').forEach(l => l.classList.remove('open'));
   $$('.custom-select-btn.open').forEach(b => b.classList.remove('open'));
@@ -146,15 +188,6 @@ function scramble(el, text, ms, cb) {
 }
 
 /* ── CSV ─────────────────────────────────────────────────── */
-function splitCSV(line) {
-  const r = []; let cur = '', q = false;
-  for (const ch of line) {
-    if (ch === '"') q = !q;
-    else if (ch === ',' && !q) { r.push(cur); cur = ''; }
-    else cur += ch;
-  }
-  r.push(cur); return r;
-}
 function parseCSV(text) {
   const result = Papa.parse(text, {
     header: true,
@@ -164,62 +197,35 @@ function parseCSV(text) {
   return result.data
     .map(row => {
       const clean = {};
-
       Object.entries(row).forEach(([k, v]) => {
         const key = String(k)
           .trim()
           .toLowerCase()
           .replace(/^\uFEFF/, '');
-
-        clean[key] = typeof v === 'string'
-          ? v.trim()
-          : v;
+        clean[key] = typeof v === 'string' ? v.trim() : v;
       });
-
       return clean;
     })
-    .filter(r =>
-      r.language &&
-      r.level &&
-      r.english &&
-      r.translation &&
-      r.category
-    );
+    // Only require the core columns — all others are optional
+    .filter(r => r.language && r.level && r.english && r.translation);
 }
 
 /* ── Load CSV ────────────────────────────────────────────── */
 async function loadCSV(url) {
   try {
     setLoadStatus(`Downloading ${S.source}...`);
-
     const res = await fetch(url);
-
-    if (!res.ok)
-      throw new Error('fetch failed');
-
+    if (!res.ok) throw new Error('fetch failed');
     const text = await res.text();
-
-    if (text.trim().startsWith('<'))
-      throw new Error('got HTML, not CSV');
-
+    if (text.trim().startsWith('<')) throw new Error('got HTML, not CSV');
     setLoadStatus('Parsing rows...');
-
-    // give browser a chance to repaint
     await new Promise(r => setTimeout(r, 0));
-
     const rows = parseCSV(text);
-
-    if (!rows.length)
-      throw new Error('no rows');
-
+    if (!rows.length) throw new Error('no rows');
     S.allRows = rows;
-
     setLoadStatus(`Loaded ${rows.length.toLocaleString()} cards`);
-
     afterLoad();
-
     setTimeout(hideLoadStatus, 2000);
-
   } catch (e) {
     setLoadStatus(`Load failed: ${e.message}`);
     setTimeout(hideLoadStatus, 4000);
@@ -232,20 +238,45 @@ function setLoadStatus(msg) {
   el.textContent = msg;
   el.style.display = 'block';
 }
-
 function hideLoadStatus() {
   $('load-status').style.display = 'none';
 }
-
 
 function afterLoad() {
   buildLangDropdown();
   buildLevelDropdown();
   buildSrcDropdown();
+  buildBrowseDropdown();   // must come before buildCategoryChips
   buildCategoryChips();
   applyFilters();
   buildPool();
   renderCard();
+}
+
+/* ── Browse dropdown ─────────────────────────────────────── */
+function buildBrowseDropdown() {
+  const MODES = [
+    { label: 'Topic', value: 'topic' },
+    { label: 'Grammar', value: 'grammar' },
+    { label: 'Tense', value: 'tense' },
+    { label: 'Misc', value: 'misc' },
+  ];
+
+  const currentLabel = MODES.find(m => m.value === S.browseMode)?.label || 'Topic';
+
+  makeDropdown(
+    'browse-dropdown',
+    MODES.map(m => m.label),
+    currentLabel,
+    val => {
+      S.browseMode = val.toLowerCase();
+      S.filterValues = ['All'];
+      buildCategoryChips();
+      applyFilters();
+      buildPool();
+      renderCard();
+    }
+  );
 }
 
 /* ── Filters ─────────────────────────────────────────────── */
@@ -265,21 +296,11 @@ function buildLevelDropdown() {
 }
 
 function buildSrcDropdown() {
-  /* const sources = ['AI-Gen', 'Tatoeba', 'Europarl']; */
-  const sources = ['AI-Gen', 'Tatoeba'];
-
-  makeDropdown('src-dropdown', sources, S.source, async val => {
+  makeDropdown('src-dropdown', ['AI-Gen', 'Tatoeba', 'Europarl'], S.source, async val => {
     if (val === S.source) return;
-
     S.source = val;
-
     try {
       await loadCSV(CSV_SOURCES[val]);
-
-      applyFilters();
-      buildPool();
-      renderCard();
-
     } catch (err) {
       console.error(err);
       alert('Failed to load source');
@@ -287,42 +308,94 @@ function buildSrcDropdown() {
   });
 }
 
+/* ── Category chips ──────────────────────────────────────── */
 function buildCategoryChips() {
-  S.categories = [...new Set(S.allRows.map(r => r.category))].filter(Boolean).sort();
+  const items = getBrowseItems();
   const bar = $('cat-chips');
-  bar.innerHTML = `<button class="chip active" data-cat="All">All</button>`;
-  S.categories.forEach(cat => {
+  bar.innerHTML = `<button class="chip active" data-val="All">All</button>`;
+
+  items.forEach(item => {
     const b = document.createElement('button');
-    b.className = 'chip'; b.dataset.cat = cat; b.textContent = cat;
+    b.className = 'chip';
+    b.dataset.val = item;
+    b.textContent = item;
     bar.appendChild(b);
   });
-  bar.querySelectorAll('.chip').forEach(b => b.addEventListener('click', () => {
-    const cat = b.dataset.cat;
-    if (cat === 'All') { S.categories_sel = ['All']; }
-    else {
-      S.categories_sel = S.categories_sel.filter(c => c !== 'All');
-      if (S.categories_sel.includes(cat))
-        S.categories_sel = S.categories_sel.filter(c => c !== cat);
-      else S.categories_sel.push(cat);
-      if (!S.categories_sel.length) S.categories_sel = ['All'];
-    }
-    syncChips(); applyFilters(); buildPool(); renderCard();
-  }));
+
+  // Attach click handlers to ALL chips including "All"
+  bar.querySelectorAll('.chip').forEach(b =>
+    b.addEventListener('click', () => {
+      const val = b.dataset.val;
+
+      if (val === 'All') {
+        S.filterValues = ['All'];
+      } else {
+        // Remove 'All' from selection, toggle this value
+        S.filterValues = S.filterValues.filter(x => x !== 'All');
+
+        if (S.filterValues.includes(val))
+          S.filterValues = S.filterValues.filter(x => x !== val);
+        else
+          S.filterValues.push(val);
+
+        // Fall back to All if nothing selected
+        if (!S.filterValues.length)
+          S.filterValues = ['All'];
+      }
+
+      syncChips();
+      applyFilters();
+      buildPool();
+      renderCard();
+    })
+  );
 }
 
 function syncChips() {
   $$('#cat-chips .chip').forEach(b =>
-    b.classList.toggle('active',
-      S.categories_sel.includes('All') ? b.dataset.cat === 'All' : S.categories_sel.includes(b.dataset.cat))
+    b.classList.toggle(
+      'active',
+      S.filterValues.includes('All')
+        ? b.dataset.val === 'All'
+        : S.filterValues.includes(b.dataset.val)
+    )
   );
 }
 
+/* ── Apply filters ───────────────────────────────────────── */
 function applyFilters() {
   let r = S.allRows;
   if (S.lang !== 'All') r = r.filter(x => x.language === S.lang);
   if (S.level !== 'All') r = r.filter(x => x.level === S.level);
-  if (!S.categories_sel.includes('All'))
-    r = r.filter(x => S.categories_sel.includes(x.category));
+
+  if (!S.filterValues.includes('All')) {
+
+    if (S.browseMode === 'topic') {
+      r = r.filter(x => S.filterValues.includes(x.category));
+    }
+
+    else if (S.browseMode === 'grammar') {
+      r = r.filter(x => {
+        const tags = (x.grammar || '').split('|').map(v => v.trim());
+        return S.filterValues.some(v => tags.includes(v));
+      });
+    }
+
+    else if (S.browseMode === 'tense') {
+      r = r.filter(x => S.filterValues.includes(x.tense));
+    }
+
+    else if (S.browseMode === 'misc') {
+      r = r.filter(x => {
+        return S.filterValues.every(label => {
+          const def = MISC_FILTERS.find(f => f.label === label);
+          if (!def) return true;
+          return String(x[def.col]).toLowerCase() === 'true';
+        });
+      });
+    }
+  }
+
   S.filtered = r;
   $('stats-text').innerHTML = S.filtered.length
     ? `<span>${S.filtered.length}</span> sentences &nbsp;·&nbsp; <span>${new Set(S.filtered.map(r => r.category)).size}</span> categories`
@@ -332,7 +405,10 @@ function applyFilters() {
 /* ── Pool ────────────────────────────────────────────────── */
 function shuffle(a) {
   const b = [...a];
-  for (let i = b.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1));[b[i], b[j]] = [b[j], b[i]]; }
+  for (let i = b.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [b[i], b[j]] = [b[j], b[i]];
+  }
   return b;
 }
 function buildPool() {
@@ -363,7 +439,7 @@ function renderCard() {
     <div class="card" id="main-card">
       <div class="card-meta">
         <span class="card-level">${row.level}</span>
-        <span>${row.category}</span>
+        <span>${row.category || ''}</span>
         <span>${row.language}</span>
       </div>
       <div class="card-primary" id="card-primary" style="font-size:${S.fontSize}px"></div>
@@ -407,10 +483,6 @@ function goPrev() {
   renderCard();
 }
 
-function esc(s) {
-  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-}
-
 /* ── TTS ─────────────────────────────────────────────────── */
 const LANG_MAP = { German: 'de', French: 'fr', Polish: 'pl', Spanish: 'es', Italian: 'it', Japanese: 'ja' };
 let allVoices = [];
@@ -431,7 +503,7 @@ function populateVoiceSelect() {
   const relevant = allVoices.filter(v => !langCode || v.lang.toLowerCase().startsWith(langCode));
   const pool = relevant.length ? relevant : allVoices;
   sel.innerHTML = '<option value="">Default</option>';
-  pool.forEach((v, i) => {
+  pool.forEach(v => {
     const opt = document.createElement('option');
     opt.value = v.name;
     opt.textContent = `${v.name} (${v.lang})`;
@@ -477,11 +549,11 @@ function renderPresCard() {
   const secondary = showTarget ? row.english : row.translation;
   const pPrim = $('pres-primary'), pSec = $('pres-secondary');
   $('pres-meta').innerHTML = `
-  <div style="display:flex;gap:24px">
-    <span class="pres-level">${row.level}</span>
-    <span>${row.language}</span>
-  </div>
-  <div>${row.category}</div>`;
+    <div style="display:flex;gap:24px">
+      <span class="pres-level">${row.level}</span>
+      <span>${row.language}</span>
+    </div>
+    <div>${row.category || ''}</div>`;
   scramble(pPrim, primary, 400);
   pSec.classList.add('hidden');
   pSec.textContent = secondary;
@@ -662,6 +734,14 @@ function updateKeyHints() {
   Object.entries(m).forEach(([id, val]) => { const el = $(id); if (el) el.textContent = keyLabel(val); });
 }
 
+/* ── Flip label helper (hoisted for use in attachEvents) ─── */
+function getFlipLabel() {
+  const lang = (S.lang && S.lang !== 'All') ? S.lang : 'Target';
+  if (S.creatorFlip === false) return `EN → ${lang}`;
+  if (S.creatorFlip === true) return `EN ← ${lang}`;
+  return `EN ⇄ ${lang}`;
+}
+
 /* ── Keyboard ────────────────────────────────────────────── */
 function handleKey(e) {
   if (['INPUT', 'SELECT', 'TEXTAREA'].includes(e.target.tagName)) return;
@@ -693,7 +773,8 @@ function handleUpload(file) {
       if (!rows.length) throw new Error('No valid rows found. Check column headers.');
       S.allRows = rows;
       buildLangDropdown(); buildLevelDropdown();
-      buildCategoryChips(); applyFilters(); buildPool(); renderCard();
+      buildBrowseDropdown(); buildCategoryChips();
+      applyFilters(); buildPool(); renderCard();
       $('upload-status').className = 'upload-status ok';
       $('upload-status').textContent = `✓ Loaded ${rows.length} sentences from ${file.name}`;
       setTimeout(() => $('upload-overlay').classList.remove('active'), 1600);
@@ -716,17 +797,24 @@ function attachEvents() {
     syncColorPickers();
   });
   $('settings-close').addEventListener('click', () => $('settings-overlay').classList.remove('active'));
-  $('settings-overlay').addEventListener('click', e => { if (e.target === $('settings-overlay')) $('settings-overlay').classList.remove('active'); });
+  $('settings-overlay').addEventListener('click', e => {
+    if (e.target === $('settings-overlay')) $('settings-overlay').classList.remove('active');
+  });
 
   $('upload-btn').addEventListener('click', () => $('upload-overlay').classList.add('active'));
   $('upload-close').addEventListener('click', () => $('upload-overlay').classList.remove('active'));
-  $('upload-overlay').addEventListener('click', e => { if (e.target === $('upload-overlay')) $('upload-overlay').classList.remove('active'); });
+  $('upload-overlay').addEventListener('click', e => {
+    if (e.target === $('upload-overlay')) $('upload-overlay').classList.remove('active');
+  });
   $('upload-file-input').addEventListener('change', e => { if (e.target.files[0]) handleUpload(e.target.files[0]); });
   const drop = $('upload-drop');
   drop.addEventListener('click', () => $('upload-file-input').click());
   drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('dragover'); });
   drop.addEventListener('dragleave', () => drop.classList.remove('dragover'));
-  drop.addEventListener('drop', e => { e.preventDefault(); drop.classList.remove('dragover'); if (e.dataTransfer.files[0]) handleUpload(e.dataTransfer.files[0]); });
+  drop.addEventListener('drop', e => {
+    e.preventDefault(); drop.classList.remove('dragover');
+    if (e.dataTransfer.files[0]) handleUpload(e.dataTransfer.files[0]);
+  });
 
   $$('.theme-dot').forEach(d => d.addEventListener('click', () => applyTheme(d.dataset.theme)));
 
@@ -767,13 +855,6 @@ function attachEvents() {
   $('prev-btn').addEventListener('click', goPrev);
   $('next-btn').addEventListener('click', goNext);
   $('reveal-btn').addEventListener('click', revealCard);
-
-  function getFlipLabel() {
-    const lang = (S.lang && S.lang !== 'All') ? S.lang : 'Target';
-    if (S.creatorFlip === false) return `EN → ${lang}`;
-    if (S.creatorFlip === true) return `EN ← ${lang}`;
-    return `EN ⇄ ${lang}`;
-  }
 
   $('flip-btn').addEventListener('click', () => {
     if (S.creatorFlip === false) S.creatorFlip = true;
