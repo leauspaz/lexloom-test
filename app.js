@@ -270,12 +270,10 @@ function loadCSVWithProgress(url, source, onProgress) {
     function startDotAnimation(baseMsg) {
       if (dotInterval) clearInterval(dotInterval);
       dotInterval = setInterval(() => {
-        dotCount = (dotCount + 1) % 4;
-        // Fixed width: always show 3 positions, dim inactive ones
-        const active = dotCount;
-        const dots = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'][dotCount % 10];
+        dotCount = (dotCount + 1) % 10;
+        const dots = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'][dotCount];
         onProgress(baseMsg + ' ' + dots);
-      }, 500);
+      }, 80);
     }
 
     function stopDotAnimation() {
@@ -326,7 +324,7 @@ async function loadCSV(url, source) {
       let cacheDotInterval = setInterval(() => {
         cacheDotCount = (cacheDotCount + 1) % cacheSpinner.length;
         setLoadStatus('Loading Lexloom ' + source + ' from cache ' + cacheSpinner[cacheDotCount]);
-      }, 500);
+      }, 80);
       await new Promise(r => setTimeout(r, 0));
 
       const rows = parseCSV(cached.text);
@@ -352,13 +350,16 @@ async function loadCSV(url, source) {
     let parseDotInterval = setInterval(() => {
       parseDotCount = (parseDotCount + 1) % spinner.length;
       setLoadStatus('Parsing rows ' + spinner[parseDotCount]);
-    }, 500);
-    await new Promise(r => setTimeout(r, 0));
+    }, 80);
+
+    // Give browser time to show spinner before synchronous parsing
+    await new Promise(r => setTimeout(r, 200));
 
     const rows = parseCSV(text);
     if (!rows.length) throw new Error('no rows');
 
-    // Save to cache
+    // Keep spinner visible briefly after parsing
+    await new Promise(r => setTimeout(r, 300));
     if (parseDotInterval) clearInterval(parseDotInterval);
     await setCachedCSV(source, text, currentVersion);
 
