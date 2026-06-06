@@ -1,37 +1,36 @@
 "use strict";
 
-/* ── CSV source ─────────────────────────────────────────── */
+/* ── CSV Sources ─────────────────────────────────────────── */
 const CSV_SOURCES = {
-  'AI-Gen': {
-    url: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRRfCI2jZaiIncwd9H8Edmgov8VWTKaMAd27my9FgecSF_UuAJAp-vVmM8JZJygpdXUJEV-uK2wdwmL/pub?output=csv',
-    version: 1
-  },
-  'Lexloom Ⓒ': {
+  'DE': {
     url: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSN8-Nly4SsV-gUimGWZ2A6BUxO0_WqfBrgoYMXyVNWOYqjGZZB1L_6rLMsbCE9Z9JKwAtyFacksbs7/pub?output=csv',
-    version: 1
-  },
-  'Europarl': {
-    url: 'https://YOUR_EUROPARL_URL',
-    version: 1
+    version: 2
   }
+};
+
+// Language to source mapping for future expansion
+const LANG_SOURCE_MAP = {
+  'DE': 'DE',
+  // 'FR': 'FR', // Add when French source is available
+  // 'ES': 'ES', // Add when Spanish source is available
 };
 
 /* ── State ──────────────────────────────────────────────── */
 const S = {
   allRows: [], filtered: [], pool: [], poolIndex: 0,
   languages: [], categories: [],
-  lang: 'All', level: 'All',
-  source: 'AI-Gen',
+  lang: 'DE', level: 'All',
+  source: 'DE',
   autoPlay: true, presMode: false, presRevealed: false,
   creatorFlip: 'mix', currentFlip: false, flipMap: {}, revealed: false, randomize: true,
-  theme: 'latte', fontSize: 22,
+  theme: 'hammerhead', fontSize: 22,
   keyReveal: ' ', keyNext: 'ArrowRight', keyPrev: 'ArrowLeft', keyTTS: 's',
   customVars: {}, ttsVoice: '',
-  wordStyles: { NOUN: '', VERB: '', ADJ: '', ADV: '', ADP: '' },
+  wordStyles: { NOUN: 'underline', VERB: 'dotted' },
   // New filter state
-  filterMode: 'category',
+  filterMode: 'topic',
   filterSelections: {
-    category: ['All'],
+    topic: ['All'],
     grammar: ['All'],
     sentence_type: ['All'],
     inclusions: ['All'],
@@ -41,7 +40,7 @@ const S = {
 };
 
 const FILTER_MODES = [
-  { key: 'category', label: 'Categories' },
+  { key: 'topic', label: 'Topic' },
   { key: 'grammar', label: 'Grammar' },
   { key: 'sentence_type', label: 'Sentence Type' },
   { key: 'inclusions', label: 'Inclusions' },
@@ -50,10 +49,10 @@ const FILTER_MODES = [
 ];
 
 const INCLUSION_OPTIONS = [
-  { key: 'has_two_way_prep', label: 'Two-way Prep' },
+  { key: 'has_two_way_prep', label: 'Two-way Preposition' },
   { key: 'separable_verb', label: 'Separable Verb' },
   { key: 'reflexive_verb', label: 'Reflexive Verb' },
-  { key: 'genitive_attr', label: 'Genitive Attr' }
+  { key: 'genitive_attr', label: 'Genitive Attribute' }
 ];
 
 const COLOR_VARS = [
@@ -259,7 +258,34 @@ function parseCSV(text) {
     .filter(r => r.language && r.level && r.english && r.translation && r.category);
 }
 
-/* ── Load CSV ────────────────────────────────────────────── */
+/* ── Load CSV with XMLHttpRequest for progress ──────────── */
+function loadCSVWithProgress(url, source, onProgress) {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('GET', url, true);
+
+    xhr.onprogress = e => {
+      if (e.lengthComputable && onProgress) {
+        const percent = Math.round((e.loaded / e.total) * 100);
+        onProgress(percent);
+      }
+    };
+
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        resolve(xhr.responseText);
+      } else {
+        reject(new Error(`HTTP ${xhr.status}`));
+      }
+    };
+
+    xhr.onerror = () => reject(new Error('Network error'));
+    xhr.ontimeout = () => reject(new Error('Timeout'));
+
+    xhr.send();
+  });
+}
+
 async function loadCSV(url, source) {
   try {
     const sourceConfig = CSV_SOURCES[source];
@@ -283,12 +309,13 @@ async function loadCSV(url, source) {
       return;
     }
 
-    // Download if no cache or version mismatch
-    setLoadStatus(`Downloading ${source}...`);
-    const res = await fetch(url);
-    if (!res.ok) throw new Error('fetch failed');
+    // Download with progress
+    setLoadStatus(`Downloading ${source}... 0%`);
 
-    const text = await res.text();
+    const text = await loadCSVWithProgress(url, source, percent => {
+      setLoadStatus(`Downloading ${source}... ${percent}%`);
+    });
+
     if (text.trim().startsWith('<')) throw new Error('got HTML, not CSV');
 
     setLoadStatus('Parsing rows...');
@@ -325,7 +352,6 @@ function hideLoadStatus() {
 function afterLoad() {
   buildLangDropdown();
   buildLevelDropdown();
-  buildSrcDropdown();
   buildFilterModeDropdown();
   buildFilterChips();
   applyFilters();
@@ -333,13 +359,55 @@ function afterLoad() {
   renderCard();
 }
 
+/* ── Language handling ──────────────────────────────────── */
+async function handleLanguageChange(newLang) {
+  const oldLang = S.lang;
+  S.lang = newLang;
+
+  // Check if we need to load a different source
+  const newSource = LANG_SOURCE_MAP[newLang];
+
+  if (newSource && newSource !== S.source && CSV_SOURCES[newSource]) {
+    // Need to load new source for this language
+    S.source = newSource;
+    try {
+      await loadCSV(CSV_SOURCES[newSource].url, newSource);
+      // After loading, apply the language filter
+      applyFilters();
+      buildPool();
+      renderCard();
+    } catch (err) {
+      console.error(err);
+      S.lang = oldLang; // Revert on failure
+      S.source = LANG_SOURCE_MAP[oldLang] || S.source;
+      alert('Failed to load source for ' + newLang);
+    }
+  } else {
+    // Same source, just filter
+    applyFilters();
+    buildPool();
+    renderCard();
+  }
+
+  $('flip-label').textContent = getFlipLabel();
+  saveSettings();
+}
+
 /* ── Filters ─────────────────────────────────────────────── */
 function buildLangDropdown() {
-  S.languages = ['All', ...new Set(S.allRows.map(r => r.language))];
-  makeDropdown('lang-dropdown', S.languages, S.lang, val => {
-    S.lang = val; applyFilters(); buildPool(); renderCard();
-    $('flip-label').textContent = getFlipLabel();
+  const langs = ['All', ...new Set(S.allRows.map(r => r.language))].filter(Boolean);
+  const options = langs.length === 1 ? langs : langs;
+  const current = S.lang;
+  makeDropdown('lang-dropdown', options, current, val => {
+    handleLanguageChange(val);
   });
+  // Mobile version
+  const mobileLang = $('lang-dropdown-mobile');
+  if (mobileLang) {
+    makeDropdown('lang-dropdown-mobile', options, current, val => {
+      handleLanguageChange(val);
+    });
+  }
 }
 
 function buildLevelDropdown() {
@@ -347,31 +415,21 @@ function buildLevelDropdown() {
   makeDropdown('level-dropdown', levels, S.level, val => {
     S.level = val; applyFilters(); buildPool(); renderCard();
   });
-}
-
-function buildSrcDropdown() {
-  const sources = Object.keys(CSV_SOURCES).filter(k => CSV_SOURCES[k].url && !CSV_SOURCES[k].url.includes('YOUR_'));
-  makeDropdown('src-dropdown', sources, S.source, async val => {
-    if (val === S.source) return;
-    S.source = val;
-    try {
-      await loadCSV(CSV_SOURCES[val].url, val);
-      applyFilters();
-      buildPool();
-      renderCard();
-    } catch (err) {
-      console.error(err);
-      alert('Failed to load source');
-    }
-  });
+  // Mobile version
+  const mobileLevel = $('level-dropdown-mobile');
+  if (mobileLevel) {
+    makeDropdown('level-dropdown-mobile', levels, S.level, val => {
+      S.level = val; applyFilters(); buildPool(); renderCard();
+    });
+  }
 }
 
 /* ── Filter Mode Dropdown ───────────────────────────────── */
 function buildFilterModeDropdown() {
   const options = FILTER_MODES.map(m => m.label);
-  const current = FILTER_MODES.find(m => m.key === S.filterMode)?.label || 'Categories';
+  const current = FILTER_MODES.find(m => m.key === S.filterMode)?.label || 'Topic';
   makeDropdown('filter-mode-dropdown', options, current, val => {
-    const mode = FILTER_MODES.find(m => m.label === val)?.key || 'category';
+    const mode = FILTER_MODES.find(m => m.label === val)?.key || 'topic';
     S.filterMode = mode;
     buildFilterChips();
     applyFilters();
@@ -383,16 +441,15 @@ function buildFilterModeDropdown() {
 /* ── Clear All Filters ──────────────────────────────────── */
 function clearAllFilters() {
   S.filterSelections = {
-    category: ['All'],
+    topic: ['All'],
     grammar: ['All'],
     sentence_type: ['All'],
     inclusions: ['All'],
     adj_declension: ['All'],
     verb_frame: ['All']
   };
-  S.lang = 'All';
+  // Don't reset language, only reset level
   S.level = 'All';
-  buildLangDropdown();
   buildLevelDropdown();
   buildFilterChips();
   applyFilters();
@@ -401,30 +458,34 @@ function clearAllFilters() {
   saveSettings();
 }
 
-function hasActiveFilters() {
-  return Object.values(S.filterSelections).some(sel => !sel.includes('All')) || S.lang !== 'All' || S.level !== 'All';
-}
-
 /* ── Filter Chips ───────────────────────────────────────── */
 function getFilterValues(mode) {
   switch (mode) {
-    case 'category':
+    case 'topic':
       return [...new Set(S.allRows.map(r => r.category))].filter(Boolean).sort();
     case 'grammar':
       return [...new Set(S.allRows.map(r => r.grammar).filter(Boolean)
         .flatMap(g => g.split('|').map(s => s.trim()))
       )].sort();
     case 'sentence_type':
-      return [...new Set(S.allRows.map(r => r.sentence_type))].filter(Boolean).sort();
+      return [...new Set(S.allRows.map(r => r.sentence_type))].filter(Boolean)
+        .map(v => capitalizeWords(v)).sort();
     case 'inclusions':
       return INCLUSION_OPTIONS.map(o => o.label);
     case 'adj_declension':
-      return [...new Set(S.allRows.map(r => r.adj_declension))].filter(Boolean).sort();
+      return [...new Set(S.allRows.map(r => r.adj_declension))].filter(Boolean)
+        .map(v => capitalizeWords(v.replace(/_/g, ' '))).sort();
     case 'verb_frame':
-      return [...new Set(S.allRows.map(r => r.verb_frame))].filter(Boolean).sort();
+      return [...new Set(S.allRows.map(r => r.verb_frame))].filter(Boolean)
+        .map(v => capitalizeWords(v.replace(/_/g, ' '))).sort();
     default:
       return [];
   }
+}
+
+function capitalizeWords(str) {
+  if (!str) return '';
+  return str.split(/[\s_-]+/).map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
 }
 
 function buildFilterChips() {
@@ -486,7 +547,7 @@ function updateClearButton() {
   if (!wrap) return;
 
   let btn = $('clear-filters-btn');
-  const hasFilters = hasActiveFilters();
+  const hasFilters = Object.values(S.filterSelections).some(sel => !sel.includes('All')) || S.level !== 'All';
 
   if (hasFilters) {
     if (!btn) {
@@ -512,7 +573,6 @@ function updateActiveFiltersSummary() {
 
   const activeFilters = [];
 
-  if (S.lang !== 'All') activeFilters.push(`Lang: ${S.lang}`);
   if (S.level !== 'All') activeFilters.push(`Level: ${S.level}`);
 
   Object.entries(S.filterSelections).forEach(([mode, vals]) => {
@@ -538,9 +598,9 @@ function applyFilters() {
   // Level filter
   if (S.level !== 'All') r = r.filter(x => x.level === S.level);
 
-  // Category filter
-  if (!S.filterSelections.category.includes('All')) {
-    r = r.filter(x => S.filterSelections.category.includes(x.category));
+  // Topic filter (was category)
+  if (!S.filterSelections.topic.includes('All')) {
+    r = r.filter(x => S.filterSelections.topic.includes(x.category));
   }
 
   // Grammar filter
@@ -554,10 +614,13 @@ function applyFilters() {
 
   // Sentence type filter
   if (!S.filterSelections.sentence_type.includes('All')) {
-    r = r.filter(x => S.filterSelections.sentence_type.includes(x.sentence_type));
+    r = r.filter(x => {
+      const val = capitalizeWords(x.sentence_type || '');
+      return S.filterSelections.sentence_type.includes(val);
+    });
   }
 
-  // Inclusions filter (boolean columns) - FIXED: case-insensitive check
+  // Inclusions filter (boolean columns)
   if (!S.filterSelections.inclusions.includes('All')) {
     r = r.filter(x => {
       return S.filterSelections.inclusions.some(incLabel => {
@@ -572,12 +635,18 @@ function applyFilters() {
 
   // Adjective declension filter
   if (!S.filterSelections.adj_declension.includes('All')) {
-    r = r.filter(x => S.filterSelections.adj_declension.includes(x.adj_declension));
+    r = r.filter(x => {
+      const val = capitalizeWords((x.adj_declension || '').replace(/_/g, ' '));
+      return S.filterSelections.adj_declension.includes(val);
+    });
   }
 
   // Verb frame filter
   if (!S.filterSelections.verb_frame.includes('All')) {
-    r = r.filter(x => S.filterSelections.verb_frame.includes(x.verb_frame));
+    r = r.filter(x => {
+      const val = capitalizeWords((x.verb_frame || '').replace(/_/g, ' '));
+      return S.filterSelections.verb_frame.includes(val);
+    });
   }
 
   S.filtered = r;
@@ -593,45 +662,46 @@ function updateStats() {
     return;
   }
 
-  // Count unique values for the CURRENT filter mode
+  const filtersAreActive = Object.values(S.filterSelections).some(sel => !sel.includes('All')) || S.level !== 'All' || S.lang !== 'All';
   const mode = S.filterMode;
+
+  // Always show available count for the current filter mode (total unique values)
   let uniqueCount = 0;
-  let label = 'categories';
+  let label = 'Topics';
 
   switch (mode) {
-    case 'category':
-      uniqueCount = new Set(S.filtered.map(r => r.category)).size;
-      label = 'categories';
+    case 'topic':
+      uniqueCount = new Set(S.allRows.map(r => r.category)).size;
+      label = 'Topics';
       break;
     case 'grammar':
-      uniqueCount = new Set(S.filtered.map(r => r.grammar).filter(Boolean)
+      uniqueCount = new Set(S.allRows.map(r => r.grammar).filter(Boolean)
         .flatMap(g => g.split('|').map(s => s.trim()))).size;
-      label = 'grammar types';
+      label = 'Grammar Types';
       break;
     case 'sentence_type':
-      uniqueCount = new Set(S.filtered.map(r => r.sentence_type)).size;
-      label = 'sentence types';
+      uniqueCount = new Set(S.allRows.map(r => r.sentence_type)).size;
+      label = 'Sentence Types';
       break;
     case 'inclusions':
-      uniqueCount = INCLUSION_OPTIONS.filter(opt => {
-        return S.filtered.some(r => {
-          const val = String(r[opt.key]).toLowerCase().trim();
-          return val === 'true' || val === '1' || val === 'yes';
-        });
-      }).length;
-      label = 'inclusions';
+      uniqueCount = INCLUSION_OPTIONS.length;
+      label = 'Inclusions';
       break;
     case 'adj_declension':
-      uniqueCount = new Set(S.filtered.map(r => r.adj_declension)).size;
-      label = 'declensions';
+      uniqueCount = new Set(S.allRows.map(r => r.adj_declension)).size;
+      label = 'Declensions';
       break;
     case 'verb_frame':
-      uniqueCount = new Set(S.filtered.map(r => r.verb_frame)).size;
-      label = 'verb frames';
+      uniqueCount = new Set(S.allRows.map(r => r.verb_frame)).size;
+      label = 'Verb Frames';
       break;
   }
 
-  statsEl.innerHTML = `<span>${S.filtered.length}</span> sentences &nbsp;·&nbsp; <span>${uniqueCount}</span> ${label}`;
+  if (filtersAreActive) {
+    statsEl.innerHTML = `<span>${S.filtered.length.toLocaleString()}</span> Sentences Selected &nbsp;·&nbsp; <span>${uniqueCount}</span> ${label} Available`;
+  } else {
+    statsEl.innerHTML = `<span>${S.filtered.length.toLocaleString()}</span> Sentences &nbsp;·&nbsp; <span>${uniqueCount}</span> ${label} Available`;
+  }
 }
 
 /* ── Pool ────────────────────────────────────────────────── */
@@ -681,53 +751,38 @@ function buildWordMap(wordData) {
     const text = (wd.text || '').toLowerCase().trim();
     if (!lemma && !text) return;
 
-    // Store the word data
-    const entry = { ...wd, _keys: new Set() };
-
-    // Add various forms for matching
     const forms = new Set();
 
-    // Original lemma and text
     if (lemma) forms.add(lemma);
     if (text) forms.add(text);
-    if (lemma) forms.add(text); // also map text to lemma's data
 
     // German-specific: handle common inflections
     if (lemma) {
-      // Add stem forms
       forms.add(lemma);
 
-      // Remove common suffixes to get stem
       const stem = lemma
-        .replace(/en$/, '')  // infinitive -> stem
-        .replace(/n$/, '')   // plural/infinitive -> stem
-        .replace(/e$/, '')   // feminine/singular -> stem
-        .replace(/er$/, '')  // masculine -> stem
-        .replace(/es$/, '')  // neuter -> stem
-        .replace(/em$/, '')  // dative -> stem
-        .replace(/er$/, '')  // genitive -> stem
-        .replace(/en$/, '')  // accusative plural -> stem
-        .replace(/e$/, '')   // various endings
-        .replace(/t$/, '')    // past participle -> stem
-        .replace(/st$/, '')   // 2nd person -> stem
-        .replace(/te$/, '')  // past tense -> stem
-        .replace(/test$/, '') // past 2nd person -> stem
-        .replace(/ten$/, '')  // past plural -> stem
-        .replace(/tet$/, '')  // past 2nd plural -> stem
-        .replace(/et$/, '')   // weak verb past -> stem
-        .replace(/est$/, '')  // weak verb past 2nd -> stem
-        .replace(/ete$/, '')  // weak verb past -> stem
-        .replace(/etet$/, '') // weak verb past plural -> stem
-        .replace(/est$/, '')  // subjunctive -> stem
-        .replace(/e$/, '')    // subjunctive -> stem
-        .replace(/en$/, '')   // subjunctive plural -> stem
-        .replace(/et$/, '')   // subjunctive 2nd plural -> stem
-        .replace(/e$/, '')    // clean up
-        .replace(/t$/, '')    // clean up
-        .replace(/st$/, '')   // clean up
-        .replace(/e$/, '');  // final clean
+        .replace(/en$/, '')
+        .replace(/n$/, '')
+        .replace(/e$/, '')
+        .replace(/er$/, '')
+        .replace(/es$/, '')
+        .replace(/em$/, '')
+        .replace(/t$/, '')
+        .replace(/st$/, '')
+        .replace(/te$/, '')
+        .replace(/test$/, '')
+        .replace(/ten$/, '')
+        .replace(/tet$/, '')
+        .replace(/et$/, '')
+        .replace(/est$/, '')
+        .replace(/ete$/, '')
+        .replace(/etet$/, '')
+        .replace(/e$/, '')
+        .replace(/t$/, '')
+        .replace(/st$/, '')
+        .replace(/e$/, '');
 
-      if (stem && stem !== lemma) {
+      if (stem && stem.length >= 2 && stem !== lemma) {
         forms.add(stem);
       }
     }
@@ -744,7 +799,7 @@ function buildWordMap(wordData) {
 
     // Store all forms pointing to this word data
     forms.forEach(form => {
-      if (form.length >= 2) { // Minimum meaningful length
+      if (form.length >= 2) {
         map.set(form, wd);
       }
     });
@@ -1065,6 +1120,7 @@ function enterPres() {
   S.presMode = true; S.presRevealed = false;
   $('presentation-mode').classList.add('active');
   $('streamer-btn').classList.add('active');
+  $('streamer-btn-desktop').classList.add('active');
   S.currentFlip = S.creatorFlip === 'mix' ? S.flipMap[S.poolIndex] : S.creatorFlip === true;
   renderPresCard();
 }
@@ -1072,6 +1128,7 @@ function exitPres() {
   S.presMode = false;
   $('presentation-mode').classList.remove('active');
   $('streamer-btn').classList.remove('active');
+  $('streamer-btn-desktop').classList.remove('active');
 }
 function renderPresCard() {
   const row = currentRow(); if (!row) return;
@@ -1095,10 +1152,11 @@ function renderPresCard() {
   pPrim.innerHTML = primaryHTML;
   attachWordHoverEvents(pPrim);
 
-  // Store secondary for reveal
+  // Store secondary for reveal - keep truly hidden until reveal
   pSec.dataset.html = secondaryHTML;
   pSec.classList.add('hidden');
-  pSec.textContent = secondary; // Show plain text initially
+  pSec.innerHTML = '&nbsp;';
+  pSec.style.opacity = '0';
 
   S.presRevealed = false;
   pPrim.style.fontSize = S.fontSize + 'px';
@@ -1110,12 +1168,13 @@ function presReveal() {
   if (S.presRevealed) return;
   S.presRevealed = true;
   const row = currentRow(); if (!row) return;
+  const pSec = $('pres-secondary');
+  const secondaryHTML = pSec.dataset.html || '';
   const showTarget = S.currentFlip !== undefined ? S.currentFlip : S.creatorFlip === true;
   const secondary = showTarget ? row.english : row.translation;
-  const pSec = $('pres-secondary');
-  const secondaryHTML = pSec.dataset.html || esc(secondary);
 
   pSec.classList.remove('hidden');
+  pSec.style.opacity = '1';
   pSec.innerHTML = secondaryHTML;
   attachWordHoverEvents(pSec);
 
@@ -1125,8 +1184,16 @@ function presReveal() {
     if (S.autoPlay) speak(row.translation, row.language);
   });
 }
-function presNext() { goNext(); S.presRevealed = false; renderPresCard(); }
-function presPrev() { goPrev(); S.presRevealed = false; renderPresCard(); }
+function presNext() {
+  S.presRevealed = false;
+  goNext();
+  renderPresCard();
+}
+function presPrev() {
+  S.presRevealed = false;
+  goPrev();
+  renderPresCard();
+}
 
 /* ── Mute toggle ─────────────────────────────────────────── */
 const ICON_ON = `<path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>`;
@@ -1256,7 +1323,7 @@ function syncWordStyleSettings() {
 function loadSettings() {
   try {
     const s = JSON.parse(localStorage.getItem('ll_v3') || '{}');
-    if (s.theme) applyTheme(s.theme); else applyTheme('catppuccin');
+    if (s.theme) applyTheme(s.theme); else applyTheme('hammerhead');
     if (s.fontSize) S.fontSize = s.fontSize;
     if (s.keyReveal !== undefined) S.keyReveal = s.keyReveal;
     if (s.keyNext !== undefined) S.keyNext = s.keyNext;
@@ -1271,6 +1338,8 @@ function loadSettings() {
     }
     if (s.wordStyles) {
       S.wordStyles = s.wordStyles;
+    } else {
+      S.wordStyles = { NOUN: 'underline', VERB: 'dotted' };
     }
     if (s.filterSelections) {
       S.filterSelections = { ...S.filterSelections, ...s.filterSelections };
@@ -1278,7 +1347,13 @@ function loadSettings() {
     if (s.filterMode) {
       S.filterMode = s.filterMode;
     }
-  } catch (e) { applyTheme('latte'); }
+    if (s.lang) {
+      S.lang = s.lang;
+    }
+    if (s.level) {
+      S.level = s.level;
+    }
+  } catch (e) { applyTheme('hammerhead'); }
 }
 function saveSettings() {
   localStorage.setItem('ll_v3', JSON.stringify({
@@ -1286,6 +1361,7 @@ function saveSettings() {
     keyReveal: S.keyReveal, keyNext: S.keyNext, keyPrev: S.keyPrev, keyTTS: S.keyTTS,
     randomize: S.randomize, autoPlay: S.autoPlay, ttsVoice: S.ttsVoice, customVars: S.customVars,
     wordStyles: S.wordStyles, filterSelections: S.filterSelections, filterMode: S.filterMode,
+    lang: S.lang, level: S.level,
   }));
 }
 
@@ -1365,9 +1441,18 @@ function handleUpload(file) {
 /* ── Attach events ───────────────────────────────────────── */
 function attachEvents() {
   $('mute-btn').addEventListener('click', () => { S.autoPlay = !S.autoPlay; syncMuteBtn(); saveSettings(); });
+  const muteBtnMobile = $('mute-btn-mobile');
+  if (muteBtnMobile) muteBtnMobile.addEventListener('click', () => { S.autoPlay = !S.autoPlay; syncMuteBtn(); saveSettings(); });
   $('streamer-btn').addEventListener('click', () => S.presMode ? exitPres() : enterPres());
+  $('streamer-btn-desktop').addEventListener('click', () => S.presMode ? exitPres() : enterPres());
 
   $('settings-btn').addEventListener('click', () => {
+    $('settings-overlay').classList.add('active');
+    populateVoiceSelect();
+    syncColorPickers();
+  });
+  const settingsBtnMobile = $('settings-btn-mobile');
+  if (settingsBtnMobile) settingsBtnMobile.addEventListener('click', () => {
     $('settings-overlay').classList.add('active');
     populateVoiceSelect();
     syncColorPickers();
@@ -1376,6 +1461,8 @@ function attachEvents() {
   $('settings-overlay').addEventListener('click', e => { if (e.target === $('settings-overlay')) $('settings-overlay').classList.remove('active'); });
 
   $('upload-btn').addEventListener('click', () => $('upload-overlay').classList.add('active'));
+  const uploadBtnMobile = $('upload-btn-mobile');
+  if (uploadBtnMobile) uploadBtnMobile.addEventListener('click', () => $('upload-overlay').classList.add('active'));
   $('upload-close').addEventListener('click', () => $('upload-overlay').classList.remove('active'));
   $('upload-overlay').addEventListener('click', e => { if (e.target === $('upload-overlay')) $('upload-overlay').classList.remove('active'); });
   $('upload-file-input').addEventListener('change', e => { if (e.target.files[0]) handleUpload(e.target.files[0]); });
@@ -1461,5 +1548,14 @@ document.addEventListener('DOMContentLoaded', () => {
   initCursor();
   initSettingsScroll();
   attachEvents();
+
+  // Apply default font
+  S.fontFamily = "'Inconsolata', monospace";
+  document.documentElement.style.setProperty('--sans', S.fontFamily);
+  document.documentElement.style.setProperty('--mono', S.fontFamily);
+  $$('#font-btns .font-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.font === S.fontFamily);
+  });
+
   loadCSV(CSV_SOURCES[S.source].url, S.source);
 });
