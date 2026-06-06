@@ -6,9 +6,9 @@ const CSV_SOURCES = {
     url: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRRfCI2jZaiIncwd9H8Edmgov8VWTKaMAd27my9FgecSF_UuAJAp-vVmM8JZJygpdXUJEV-uK2wdwmL/pub?output=csv',
     version: 1
   },
-  'Lexloom': {
+  'Lexloom Ⓒ': {
     url: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSN8-Nly4SsV-gUimGWZ2A6BUxO0_WqfBrgoYMXyVNWOYqjGZZB1L_6rLMsbCE9Z9JKwAtyFacksbs7/pub?output=csv',
-    version: 2
+    version: 1
   },
   'Europarl': {
     url: 'https://YOUR_EUROPARL_URL',
@@ -350,7 +350,7 @@ function buildLevelDropdown() {
 }
 
 function buildSrcDropdown() {
-  const sources = ['AI-Gen', 'Lexloom ©'];
+  const sources = Object.keys(CSV_SOURCES).filter(k => CSV_SOURCES[k].url && !CSV_SOURCES[k].url.includes('YOUR_'));
   makeDropdown('src-dropdown', sources, S.source, async val => {
     if (val === S.source) return;
     S.source = val;
