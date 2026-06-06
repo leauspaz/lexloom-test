@@ -22,9 +22,9 @@
     window.dataLayer = window.dataLayer || [];
     function gtag(){dataLayer.push(arguments);}
     gtag('js', new Date());
+
     gtag('config', 'G-F1DKQVV7QF');
   </script>
-<base target="_blank">
 </head>
 <body>
 
@@ -82,14 +82,10 @@
 
 <div id="main">
   <div id="filter-bar">
-    <div id="filter-mode-wrap">
-      <span class="filter-label">Filter by</span>
-      <div id="filter-mode-dropdown" class="custom-select"></div>
-    </div>
     <div id="cat">
-      <div id="cat-chips"></div>
+    <span class="filter-label">Categories</span>
+    <div id="cat-chips"></div>
     </div>
-    <div id="active-filters-summary"></div>
   </div>
   <div id="stats-bar"><span id="stats-text"></span></div>
   <div id="cards-grid"></div>
@@ -233,67 +229,6 @@
     </div>
 
     <div class="settings-section">
-      <div class="settings-section-label">Word Styling</div>
-      <div class="word-style-grid" id="word-style-grid">
-        <div class="word-style-row">
-          <span class="word-style-label">Nouns</span>
-          <select class="word-style-select" data-pos="NOUN">
-            <option value="">None</option>
-            <option value="underline">Underline</option>
-            <option value="italic">Italic</option>
-            <option value="bold">Bold</option>
-            <option value="wavy">Wavy underline</option>
-            <option value="dotted">Dotted underline</option>
-          </select>
-        </div>
-        <div class="word-style-row">
-          <span class="word-style-label">Verbs</span>
-          <select class="word-style-select" data-pos="VERB">
-            <option value="">None</option>
-            <option value="underline">Underline</option>
-            <option value="italic">Italic</option>
-            <option value="bold">Bold</option>
-            <option value="wavy">Wavy underline</option>
-            <option value="dotted">Dotted underline</option>
-          </select>
-        </div>
-        <div class="word-style-row">
-          <span class="word-style-label">Adjectives</span>
-          <select class="word-style-select" data-pos="ADJ">
-            <option value="">None</option>
-            <option value="underline">Underline</option>
-            <option value="italic">Italic</option>
-            <option value="bold">Bold</option>
-            <option value="wavy">Wavy underline</option>
-            <option value="dotted">Dotted underline</option>
-          </select>
-        </div>
-        <div class="word-style-row">
-          <span class="word-style-label">Adverbs</span>
-          <select class="word-style-select" data-pos="ADV">
-            <option value="">None</option>
-            <option value="underline">Underline</option>
-            <option value="italic">Italic</option>
-            <option value="bold">Bold</option>
-            <option value="wavy">Wavy underline</option>
-            <option value="dotted">Dotted underline</option>
-          </select>
-        </div>
-        <div class="word-style-row">
-          <span class="word-style-label">Prepositions</span>
-          <select class="word-style-select" data-pos="ADP">
-            <option value="">None</option>
-            <option value="underline">Underline</option>
-            <option value="italic">Italic</option>
-            <option value="bold">Bold</option>
-            <option value="wavy">Wavy underline</option>
-            <option value="dotted">Dotted underline</option>
-          </select>
-        </div>
-      </div>
-    </div>
-
-    <div class="settings-section">
       <div class="settings-section-label">Options</div>
       <div class="toggle-row">
         <span class="toggle-label">Randomize sentence order</span>
@@ -342,9 +277,6 @@
   <span class="key-hint-item"><span class="key-hint-key" id="hint-tts-key">S</span> speak</span>
   <span class="key-hint-item"><span class="key-hint-key">Esc</span> exit</span>
 </div>
-
-<!-- WORD TOOLTIP -->
-<div id="word-tooltip" class="word-tooltip"></div>
 
 <script src="app.js"></script>
 </body>
