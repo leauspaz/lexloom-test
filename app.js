@@ -8,7 +8,7 @@ const CSV_SOURCES = {
   },
   'Lexloom': {
     url: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSN8-Nly4SsV-gUimGWZ2A6BUxO0_WqfBrgoYMXyVNWOYqjGZZB1L_6rLMsbCE9Z9JKwAtyFacksbs7/pub?output=csv',
-    version: 1
+    version: 2
   },
   'Europarl': {
     url: 'https://YOUR_EUROPARL_URL',
