@@ -271,8 +271,10 @@ function loadCSVWithProgress(url, source, onProgress) {
       if (dotInterval) clearInterval(dotInterval);
       dotInterval = setInterval(() => {
         dotCount = (dotCount + 1) % 4;
-        const dots = '.'.repeat(dotCount);
-        onProgress(baseMsg + dots);
+        // Fixed width: always show 3 positions, dim inactive ones
+        const active = dotCount;
+        const dots = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'][dotCount % 10];
+        onProgress(baseMsg + ' ' + dots);
       }, 500);
     }
 
@@ -320,10 +322,10 @@ async function loadCSV(url, source) {
 
     if (cached && cached.version === currentVersion) {
       let cacheDotCount = 0;
+      const cacheSpinner = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
       let cacheDotInterval = setInterval(() => {
-        cacheDotCount = (cacheDotCount + 1) % 4;
-        const dots = '.'.repeat(cacheDotCount);
-        setLoadStatus('Loading Lexloom ' + source + ' from cache' + dots);
+        cacheDotCount = (cacheDotCount + 1) % cacheSpinner.length;
+        setLoadStatus('Loading Lexloom ' + source + ' from cache ' + cacheSpinner[cacheDotCount]);
       }, 500);
       await new Promise(r => setTimeout(r, 0));
 
@@ -346,10 +348,10 @@ async function loadCSV(url, source) {
     if (text.trim().startsWith('<')) throw new Error('got HTML, not CSV');
 
     let parseDotCount = 0;
+    const spinner = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
     let parseDotInterval = setInterval(() => {
-      parseDotCount = (parseDotCount + 1) % 4;
-      const dots = '.'.repeat(parseDotCount);
-      setLoadStatus('Parsing rows' + dots);
+      parseDotCount = (parseDotCount + 1) % spinner.length;
+      setLoadStatus('Parsing rows ' + spinner[parseDotCount]);
     }, 500);
     await new Promise(r => setTimeout(r, 0));
 
