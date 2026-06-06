@@ -264,14 +264,31 @@ function loadCSVWithProgress(url, source, onProgress) {
     const xhr = new XMLHttpRequest();
     xhr.open('GET', url, true);
 
-    xhr.onprogress = e => {
-      if (e.lengthComputable && onProgress) {
-        const percent = Math.round((e.loaded / e.total) * 100);
-        onProgress(percent);
+    let dotCount = 0;
+    let dotInterval = null;
+
+    function startDotAnimation(baseMsg) {
+      if (dotInterval) clearInterval(dotInterval);
+      dotInterval = setInterval(() => {
+        dotCount = (dotCount + 1) % 4;
+        const dots = '.'.repeat(dotCount);
+        onProgress(baseMsg + dots);
+      }, 500);
+    }
+
+    function stopDotAnimation() {
+      if (dotInterval) {
+        clearInterval(dotInterval);
+        dotInterval = null;
       }
+    }
+
+    xhr.onloadstart = () => {
+      startDotAnimation('Downloading Lexloom ' + source);
     };
 
     xhr.onload = () => {
+      stopDotAnimation();
       if (xhr.status >= 200 && xhr.status < 300) {
         resolve(xhr.responseText);
       } else {
@@ -279,8 +296,14 @@ function loadCSVWithProgress(url, source, onProgress) {
       }
     };
 
-    xhr.onerror = () => reject(new Error('Network error'));
-    xhr.ontimeout = () => reject(new Error('Timeout'));
+    xhr.onerror = () => {
+      stopDotAnimation();
+      reject(new Error('Network error'));
+    };
+    xhr.ontimeout = () => {
+      stopDotAnimation();
+      reject(new Error('Timeout'));
+    };
 
     xhr.send();
   });
@@ -296,10 +319,16 @@ async function loadCSV(url, source) {
     const cached = await getCachedCSV(source);
 
     if (cached && cached.version === currentVersion) {
-      setLoadStatus(`Loading ${source} from cache...`);
+      let cacheDotCount = 0;
+      let cacheDotInterval = setInterval(() => {
+        cacheDotCount = (cacheDotCount + 1) % 4;
+        const dots = '.'.repeat(cacheDotCount);
+        setLoadStatus('Loading Lexloom ' + source + ' from cache' + dots);
+      }, 500);
       await new Promise(r => setTimeout(r, 0));
 
       const rows = parseCSV(cached.text);
+      clearInterval(cacheDotInterval);
       if (!rows.length) throw new Error('no rows in cached data');
 
       S.allRows = rows;
@@ -310,21 +339,25 @@ async function loadCSV(url, source) {
     }
 
     // Download with progress
-    setLoadStatus(`Downloading ${source}... 0%`);
-
-    const text = await loadCSVWithProgress(url, source, percent => {
-      setLoadStatus(`Downloading ${source}... ${percent}%`);
+    const text = await loadCSVWithProgress(url, source, msg => {
+      setLoadStatus(msg);
     });
 
     if (text.trim().startsWith('<')) throw new Error('got HTML, not CSV');
 
-    setLoadStatus('Parsing rows...');
+    let parseDotCount = 0;
+    let parseDotInterval = setInterval(() => {
+      parseDotCount = (parseDotCount + 1) % 4;
+      const dots = '.'.repeat(parseDotCount);
+      setLoadStatus('Parsing rows' + dots);
+    }, 500);
     await new Promise(r => setTimeout(r, 0));
 
     const rows = parseCSV(text);
     if (!rows.length) throw new Error('no rows');
 
     // Save to cache
+    if (parseDotInterval) clearInterval(parseDotInterval);
     await setCachedCSV(source, text, currentVersion);
 
     S.allRows = rows;
@@ -353,8 +386,8 @@ function afterLoad() {
   buildLangDropdown();
   buildLevelDropdown();
   buildFilterModeDropdown();
-  buildFilterChips();
   applyFilters();
+  buildFilterChips();
   buildPool();
   renderCard();
 }
