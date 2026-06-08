@@ -48,6 +48,7 @@ const LANG_DATA_SOURCES = {
     sentenceWords: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQ9YgLdPbWOc0vOOCifOqBeHY2aJFpbvCgQnkfFS6oWBfLm3MsxVpCnrwIMmpKksHDFbhRwuUkZJILQ/pub?output=csv',
     posIndex: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRr7Cy_reAOC8-NL_FOc2joWuGwNlye_HMQfHU3Y5CPvKNB-5N54UC0tqLZDQWYeS5HNbXk8gDASErK/pub?output=csv',
   },
+  /*
   'PL': {
     name: 'Polish',
     sentences: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQ88aFAyS-LHKYeuYMauRuMubDRNA0dBpjnupVRURmgz412-eNBMM48joJn5SKKQrK9qatdkTXkQNKm/pub?output=csv',
@@ -55,8 +56,8 @@ const LANG_DATA_SOURCES = {
     sentenceWords: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTFM5c8dfN-EVVTE_I4Prsb1WWPWMKza-J4-lCjTSvENBCx3eOKx_npibYVr201ePIYSY4q5UI8XaB7/pub?output=csv',
     posIndex: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRs_7GwDScMFY92Leh_KUpXoupX4CWqDMiiovHFoFlFPvGg48DDjta_k3cgc2Kkz9kRrxDNsRSCRNS3/pub?output=csv',
   },
+  */
 };
-
 
 /* ── Language Feature Availability ──────────────────────── */
 // Which filters/features are available per language
@@ -67,6 +68,7 @@ const LANG_FEATURES = {
   'IT': { has_two_way_prep: false, separable_verb: false, genitive_attr: false, adj_declension: false, reflexive_verb: true },
   'PL': { has_two_way_prep: false, separable_verb: false, genitive_attr: false, adj_declension: true, reflexive_verb: true },
   'PT': { has_two_way_prep: false, separable_verb: false, genitive_attr: false, adj_declension: false, reflexive_verb: true },
+  'ZH': { has_two_way_prep: false, separable_verb: false, genitive_attr: false, adj_declension: false, reflexive_verb: false },
 };
 
 function getCurrentLangFeatures() {
@@ -1580,7 +1582,7 @@ function loadSettings() {
     if (s.wordStyles) {
       S.wordStyles = s.wordStyles;
     } else {
-      S.wordStyles = { NOUN: 'underline', VERB: 'dotted' };
+      S.wordStyles = { NOUN: 'underline', VERB: 'dotted', ADJ: 'wavy' };
     }
     if (s.filterSelections) {
       S.filterSelections = { ...S.filterSelections, ...s.filterSelections };
@@ -1835,6 +1837,14 @@ function attachEvents() {
   });
   $('settings-close').addEventListener('click', () => $('settings-overlay').classList.remove('active'));
   $('settings-overlay').addEventListener('click', e => { if (e.target === $('settings-overlay')) $('settings-overlay').classList.remove('active'); });
+
+  // Info overlay
+  const infoBtn = $('info-btn-desktop');
+  if (infoBtn) infoBtn.addEventListener('click', () => $('info-overlay').classList.add('active'));
+  const infoBtnMobile = $('info-btn-mobile');
+  if (infoBtnMobile) infoBtnMobile.addEventListener('click', () => $('info-overlay').classList.add('active'));
+  $('info-close').addEventListener('click', () => $('info-overlay').classList.remove('active'));
+  $('info-overlay').addEventListener('click', e => { if (e.target === $('info-overlay')) $('info-overlay').classList.remove('active'); });
 
   $('upload-btn').addEventListener('click', () => $('upload-overlay').classList.add('active'));
   const uploadBtnMobile = $('upload-btn-mobile');
