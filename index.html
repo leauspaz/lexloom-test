@@ -279,6 +279,17 @@
             <option value="dotted" selected>Dotted underline</option>
           </select>
         </div>
+        <div class="word-style-row">
+          <span class="word-style-label">Adjectives</span>
+          <select class="word-style-select" data-pos="ADJ">
+            <option value="" selected>None</option>
+            <option value="underline">Underline</option>
+            <option value="italic">Italic</option>
+            <option value="bold">Bold</option>
+            <option value="wavy">Wavy underline</option>
+            <option value="dotted">Dotted underline</option>
+          </select>
+        </div>
       </div>
     </div>
 
@@ -309,20 +320,19 @@
   <div id="upload-panel">
     <div class="upload-title">Upload CSV<button class="settings-close" id="upload-close">✕</button></div>
     <div class="upload-format">
-      Required columns (header row required):<br>
-      <code>language, level, english, translation, category</code><br><br>
-      Optional columns for enhanced features:<br>
-      <code>grammar, sentence_type, word_data, tense, has_two_way_prep, separable_verb, reflexive_verb, genitive_attr, adj_declension, verb_frame</code><br><br>
-      · <code>level</code>: A1 A2 B1 B2 C1 C2<br>
-      · <code>category</code>: any string (auto-detected)<br>
+      <strong>Single CSV mode:</strong> Upload a merged CSV with all columns.<br>
+      Required columns: <code>language, level, english, translation, category</code><br><br>
+      <strong>Space-efficient mode (4 files):</strong> Upload all 4 files at once for one language.<br>
+      Files needed: <code>sentences.csv</code>, <code>words.csv</code>, <code>sentence_words.csv</code>, <code>pos_index.csv</code><br><br>
+      · <code>level</code>: A1 A2 B1 B2 C1 C2 · <code>category</code>: any string<br>
       · <code>grammar</code>: pipe-separated tags e.g. <code>Passive|Relative Clause</code><br>
-      · <code>word_data</code>: JSON array with word analysis<br>
-      · <code>has_two_way_prep, separable_verb, reflexive_verb, genitive_attr</code>: TRUE/FALSE<br>
+      · <code>word_data</code>: JSON array with word analysis (single CSV only)<br>
       · UTF-8 · wrap comma-containing cells in quotes
     </div>
     <div class="upload-drop" id="upload-drop">
-      Drop CSV here or click to browse
-      <input type="file" id="upload-file-input" accept=".csv" style="display:none"/>
+      Drop CSV(s) here or click to browse<br>
+      <small style="color:var(--text-dim)">1 file = merged CSV · 4 files = space-efficient set</small>
+      <input type="file" id="upload-file-input" accept=".csv" multiple style="display:none"/>
     </div>
     <div class="upload-status" id="upload-status"></div>
   </div>

@@ -27,13 +27,6 @@ const LANG_DATA_SOURCES = {
     sentenceWords: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS6K1Yp03fv__ldDQtr-GcwvEecQxIZiIYOZx7LkpDjLaaQ2CHppUFLT_BL4TXq0xTrThSF7TXPVTQQ/pub?output=csv',
     posIndex: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTsnZ4W8aj7sLZth5UdDvzP4LoTY9h-Bi20cCKA8S0O3bUPuFCEbZCFbvTjv9Ev3JM49C_Ejxxx-v5K/pub?output=csv',
   },
-  'PL': {
-    name: 'Polish',
-    sentences: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQ88aFAyS-LHKYeuYMauRuMubDRNA0dBpjnupVRURmgz412-eNBMM48joJn5SKKQrK9qatdkTXkQNKm/pub?output=csv',
-    words: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTDx2G-Y5SgXhf1m8QtbQju20wqcqZptfA5B7LEU3FxZ4nFjY2BdOvH6Wje-UlI2TO50d23-6P5FFkV/pub?output=csv',
-    sentenceWords: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTFM5c8dfN-EVVTE_I4Prsb1WWPWMKza-J4-lCjTSvENBCx3eOKx_npibYVr201ePIYSY4q5UI8XaB7/pub?output=csv',
-    posIndex: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRs_7GwDScMFY92Leh_KUpXoupX4CWqDMiiovHFoFlFPvGg48DDjta_k3cgc2Kkz9kRrxDNsRSCRNS3/pub?output=csv',
-  },
   'IT': {
     name: 'Italian',
     sentences: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQlB0oV3OPAv48ljUqpR_aSa2WH8diTt1sm0Vji2fW-AykWQRMXxqZNmD0z2sYfD_nt-xlAMWe3kwDD/pub?output=csv',
@@ -55,7 +48,34 @@ const LANG_DATA_SOURCES = {
     sentenceWords: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQ9YgLdPbWOc0vOOCifOqBeHY2aJFpbvCgQnkfFS6oWBfLm3MsxVpCnrwIMmpKksHDFbhRwuUkZJILQ/pub?output=csv',
     posIndex: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRr7Cy_reAOC8-NL_FOc2joWuGwNlye_HMQfHU3Y5CPvKNB-5N54UC0tqLZDQWYeS5HNbXk8gDASErK/pub?output=csv',
   },
+  'PL': {
+    name: 'Polish',
+    sentences: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQ88aFAyS-LHKYeuYMauRuMubDRNA0dBpjnupVRURmgz412-eNBMM48joJn5SKKQrK9qatdkTXkQNKm/pub?output=csv',
+    words: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTDx2G-Y5SgXhf1m8QtbQju20wqcqZptfA5B7LEU3FxZ4nFjY2BdOvH6Wje-UlI2TO50d23-6P5FFkV/pub?output=csv',
+    sentenceWords: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTFM5c8dfN-EVVTE_I4Prsb1WWPWMKza-J4-lCjTSvENBCx3eOKx_npibYVr201ePIYSY4q5UI8XaB7/pub?output=csv',
+    posIndex: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRs_7GwDScMFY92Leh_KUpXoupX4CWqDMiiovHFoFlFPvGg48DDjta_k3cgc2Kkz9kRrxDNsRSCRNS3/pub?output=csv',
+  },
 };
+
+
+/* ── Language Feature Availability ──────────────────────── */
+// Which filters/features are available per language
+const LANG_FEATURES = {
+  'DE': { has_two_way_prep: true, separable_verb: true, genitive_attr: true, adj_declension: true, reflexive_verb: true },
+  'ES': { has_two_way_prep: false, separable_verb: false, genitive_attr: false, adj_declension: false, reflexive_verb: true },
+  'FR': { has_two_way_prep: false, separable_verb: false, genitive_attr: false, adj_declension: false, reflexive_verb: true },
+  'IT': { has_two_way_prep: false, separable_verb: false, genitive_attr: false, adj_declension: false, reflexive_verb: true },
+  'PL': { has_two_way_prep: false, separable_verb: false, genitive_attr: false, adj_declension: true, reflexive_verb: true },
+  'PT': { has_two_way_prep: false, separable_verb: false, genitive_attr: false, adj_declension: false, reflexive_verb: true },
+};
+
+function getCurrentLangFeatures() {
+  if (S.lang === 'All' || !LANG_FEATURES[S.lang]) {
+    // If All or unknown, show all filters (let data decide)
+    return { has_two_way_prep: true, separable_verb: true, genitive_attr: true, adj_declension: true, reflexive_verb: true };
+  }
+  return LANG_FEATURES[S.lang];
+}
 
 /* ── State ──────────────────────────────────────────────── */
 const S = {
@@ -81,21 +101,35 @@ const S = {
   }
 };
 
-const FILTER_MODES = [
-  { key: 'topic', label: 'Topic' },
-  { key: 'grammar', label: 'Grammar' },
-  { key: 'sentence_type', label: 'Sentence Type' },
-  { key: 'inclusions', label: 'Inclusions' },
-  { key: 'adj_declension', label: 'Adj. Declension' },
-  { key: 'verb_frame', label: 'Verb Frame' }
+const ALL_FILTER_MODES = [
+  { key: 'topic', label: 'Topic', always: true },
+  { key: 'grammar', label: 'Grammar', always: true },
+  { key: 'sentence_type', label: 'Sentence Type', always: true },
+  { key: 'inclusions', label: 'Inclusions', always: true },
+  { key: 'adj_declension', label: 'Adj. Declension', always: false, langKey: 'adj_declension' },
+  { key: 'verb_frame', label: 'Verb Frame', always: true },
 ];
 
-const INCLUSION_OPTIONS = [
-  { key: 'has_two_way_prep', label: 'Two-way Preposition' },
-  { key: 'separable_verb', label: 'Separable Verb' },
-  { key: 'reflexive_verb', label: 'Reflexive Verb' },
-  { key: 'genitive_attr', label: 'Genitive Attribute' }
+const ALL_INCLUSION_OPTIONS = [
+  { key: 'has_two_way_prep', label: 'Two-way Preposition', langKey: 'has_two_way_prep' },
+  { key: 'separable_verb', label: 'Separable Verb', langKey: 'separable_verb' },
+  { key: 'reflexive_verb', label: 'Reflexive Verb', langKey: 'reflexive_verb' },
+  { key: 'genitive_attr', label: 'Genitive Attribute', langKey: 'genitive_attr' }
 ];
+
+function getFilterModes() {
+  const features = getCurrentLangFeatures();
+  return ALL_FILTER_MODES.filter(m => m.always || features[m.langKey]);
+}
+
+function getInclusionOptions() {
+  const features = getCurrentLangFeatures();
+  return ALL_INCLUSION_OPTIONS.filter(o => features[o.langKey]);
+}
+
+// Backward compat aliases
+const FILTER_MODES = ALL_FILTER_MODES;
+const INCLUSION_OPTIONS = ALL_INCLUSION_OPTIONS;
 
 const COLOR_VARS = [
   { key: '--bg', label: 'Background' },
@@ -619,10 +653,16 @@ function buildLevelDropdown() {
 
 /* ── Filter Mode Dropdown ───────────────────────────────── */
 function buildFilterModeDropdown() {
-  const options = FILTER_MODES.map(m => m.label);
-  const current = FILTER_MODES.find(m => m.key === S.filterMode)?.label || 'Topic';
+  const modes = getFilterModes();
+  const options = modes.map(m => m.label);
+  // If current mode is not available for this language, reset to topic
+  const currentMode = modes.find(m => m.key === S.filterMode);
+  if (!currentMode) {
+    S.filterMode = 'topic';
+  }
+  const current = modes.find(m => m.key === S.filterMode)?.label || 'Topic';
   makeDropdown('filter-mode-dropdown', options, current, val => {
-    const mode = FILTER_MODES.find(m => m.label === val)?.key || 'topic';
+    const mode = modes.find(m => m.label === val)?.key || 'topic';
     S.filterMode = mode;
     buildFilterChips();
     applyFilters();
@@ -664,7 +704,7 @@ function getFilterValues(mode) {
       return [...new Set(S.allRows.map(r => r.sentence_type))].filter(Boolean)
         .map(v => capitalizeWords(v)).sort();
     case 'inclusions':
-      return INCLUSION_OPTIONS.map(o => o.label);
+      return getInclusionOptions().map(o => o.label);
     case 'adj_declension':
       return [...new Set(S.allRows.map(r => r.adj_declension))].filter(Boolean)
         .map(v => capitalizeWords(v.replace(/_/g, ' '))).sort();
@@ -813,11 +853,12 @@ function applyFilters() {
     });
   }
 
-  // Inclusions filter (boolean columns)
+  // Inclusions filter (boolean columns) — only check available features
   if (!S.filterSelections.inclusions.includes('All')) {
+    const availableOptions = getInclusionOptions();
     r = r.filter(x => {
       return S.filterSelections.inclusions.some(incLabel => {
-        const option = INCLUSION_OPTIONS.find(o => o.label === incLabel);
+        const option = availableOptions.find(o => o.label === incLabel);
         if (!option) return false;
         const val = x[option.key];
         const strVal = String(val).toLowerCase().trim();
@@ -877,7 +918,7 @@ function updateStats() {
       label = 'Sentence Types';
       break;
     case 'inclusions':
-      uniqueCount = INCLUSION_OPTIONS.length;
+      uniqueCount = getInclusionOptions().length;
       label = 'Inclusions';
       break;
     case 'adj_declension':
@@ -1617,25 +1658,160 @@ function handleKey(e) {
 }
 
 /* ── Upload ──────────────────────────────────────────────── */
-function handleUpload(file) {
-  const reader = new FileReader();
-  reader.onload = e => {
+let pendingUploadFiles = [];
+
+function detectFileType(filename) {
+  const lower = filename.toLowerCase();
+  if (lower.includes('sentence_words')) return 'sentenceWords';
+  if (lower.includes('sentences')) return 'sentences';
+  if (lower.includes('words') && !lower.includes('sentence')) return 'words';
+  if (lower.includes('pos_index')) return 'posIndex';
+  return 'merged'; // fallback: single merged CSV
+}
+
+async function handleUploadFiles(files) {
+  pendingUploadFiles = [...files];
+  const fileMap = {};
+
+  for (const file of files) {
+    const type = detectFileType(file.name);
+    fileMap[type] = file;
+  }
+
+  // Check if it's a space-efficient set (4 files) or single merged CSV
+  const hasSpaceEfficient = fileMap.sentences && fileMap.words && fileMap.sentenceWords;
+
+  if (hasSpaceEfficient) {
+    // Space-efficient mode: load words, sentenceWords, posIndex, then sentences
+    $('upload-status').className = 'upload-status';
+    $('upload-status').textContent = 'Loading space-efficient set...';
+
     try {
-      const rows = parseCSV(e.target.result);
-      if (!rows.length) throw new Error('No valid rows found. Check column headers.');
-      S.allRows = rows;
-      buildLangDropdown(); buildLevelDropdown();
-      buildFilterModeDropdown(); buildFilterChips();
-      applyFilters(); buildPool(); renderCard();
+      // 1. Load words
+      if (fileMap.words) {
+        $('upload-status').textContent = 'Parsing words.csv...';
+        const wordsText = await fileMap.words.text();
+        const wordsRows = SpaceEfficientLoader.parseCSV(wordsText);
+        SpaceEfficientLoader.wordsCache.clear();
+        for (const row of wordsRows) {
+          SpaceEfficientLoader.wordsCache.set(parseInt(row.word_id), {
+            word_id: parseInt(row.word_id),
+            lemma: row.lemma,
+            text: row.text,
+            pos: row.pos,
+            genders: SpaceEfficientLoader.safeJSON(row.genders),
+            meanings: SpaceEfficientLoader.safeJSON(row.meanings),
+            case: row.case || '',
+            tense: row.tense || '',
+            person: row.person || '',
+            number: row.number || '',
+            gender: row.gender || '',
+          });
+        }
+      }
+
+      // 2. Load sentence-word mappings
+      if (fileMap.sentenceWords) {
+        $('upload-status').textContent = 'Parsing sentence_words.csv...';
+        const swText = await fileMap.sentenceWords.text();
+        const swRows = SpaceEfficientLoader.parseCSV(swText);
+        SpaceEfficientLoader.sentenceWordsCache.clear();
+        for (const row of swRows) {
+          const sid = parseInt(row.sentence_id);
+          if (!SpaceEfficientLoader.sentenceWordsCache.has(sid)) {
+            SpaceEfficientLoader.sentenceWordsCache.set(sid, []);
+          }
+          SpaceEfficientLoader.sentenceWordsCache.get(sid).push({
+            word_id: parseInt(row.word_id),
+            token_index: parseInt(row.token_index),
+            token_text: row.token_text,
+          });
+        }
+      }
+
+      // 3. Load POS index (optional)
+      SpaceEfficientLoader.posIndex = {};
+      if (fileMap.posIndex) {
+        $('upload-status').textContent = 'Parsing pos_index...';
+        const posText = await fileMap.posIndex.text();
+        try {
+          if (posText.trim().startsWith('{')) {
+            SpaceEfficientLoader.posIndex = JSON.parse(posText);
+          } else {
+            const rows = SpaceEfficientLoader.parseCSV(posText);
+            rows.forEach(row => {
+              const pos = row.pos || row[Object.keys(row)[0]];
+              const ids = Object.values(row).slice(1).filter(v => v).map(v => parseInt(v)).filter(n => !isNaN(n));
+              if (pos) SpaceEfficientLoader.posIndex[pos] = ids;
+            });
+          }
+        } catch (e) {
+          console.warn('POS index parse failed:', e.message);
+        }
+      }
+
+      SpaceEfficientLoader.enabled = true;
+
+      // 4. Load sentences
+      $('upload-status').textContent = 'Parsing sentences.csv...';
+      const sentText = await fileMap.sentences.text();
+      const sentences = SpaceEfficientLoader.parseCSV(sentText);
+
+      if (!sentences.length) throw new Error('No sentences found');
+
+      // Detect language from first sentence or default to 'UP'
+      const detectedLang = sentences[0].language || 'UP';
+
+      S.allRows = sentences.map((row, idx) => {
+        const sid = parseInt(row.sentence_id !== undefined ? row.sentence_id : idx);
+        const wordData = SpaceEfficientLoader.getWordData(sid);
+        return {
+          ...row,
+          language: detectedLang,
+          word_data: wordData.length ? JSON.stringify(wordData) : '[]',
+        };
+      });
+
       $('upload-status').className = 'upload-status ok';
-      $('upload-status').textContent = `✓ Loaded ${rows.length} sentences from ${file.name}`;
-      setTimeout(() => $('upload-overlay').classList.remove('active'), 1600);
+      $('upload-status').textContent = `✓ Loaded ${S.allRows.length} sentences from space-efficient set`;
+
     } catch (err) {
       $('upload-status').className = 'upload-status err';
       $('upload-status').textContent = '✗ ' + err.message;
+      return;
     }
-  };
-  reader.readAsText(file);
+
+  } else if (fileMap.merged || files.length === 1) {
+    // Single merged CSV mode
+    const file = fileMap.merged || files[0];
+    try {
+      const text = await file.text();
+      const rows = parseCSV(text);
+      if (!rows.length) throw new Error('No valid rows found. Check column headers.');
+      S.allRows = rows;
+      $('upload-status').className = 'upload-status ok';
+      $('upload-status').textContent = `✓ Loaded ${rows.length} sentences from ${file.name}`;
+    } catch (err) {
+      $('upload-status').className = 'upload-status err';
+      $('upload-status').textContent = '✗ ' + err.message;
+      return;
+    }
+  } else {
+    $('upload-status').className = 'upload-status err';
+    $('upload-status').textContent = '✗ Need 4 files (sentences, words, sentence_words, pos_index) or 1 merged CSV';
+    return;
+  }
+
+  // Common: refresh UI
+  buildLangDropdown(); buildLevelDropdown();
+  buildFilterModeDropdown(); buildFilterChips();
+  applyFilters(); buildPool(); renderCard();
+  setTimeout(() => $('upload-overlay').classList.remove('active'), 1600);
+}
+
+// Legacy single-file handler
+function handleUpload(file) {
+  handleUploadFiles([file]);
 }
 
 /* ── Attach events ───────────────────────────────────────── */
@@ -1665,12 +1841,12 @@ function attachEvents() {
   if (uploadBtnMobile) uploadBtnMobile.addEventListener('click', () => $('upload-overlay').classList.add('active'));
   $('upload-close').addEventListener('click', () => $('upload-overlay').classList.remove('active'));
   $('upload-overlay').addEventListener('click', e => { if (e.target === $('upload-overlay')) $('upload-overlay').classList.remove('active'); });
-  $('upload-file-input').addEventListener('change', e => { if (e.target.files[0]) handleUpload(e.target.files[0]); });
+  $('upload-file-input').addEventListener('change', e => { if (e.target.files.length) handleUploadFiles(e.target.files); });
   const drop = $('upload-drop');
   drop.addEventListener('click', () => $('upload-file-input').click());
   drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('dragover'); });
   drop.addEventListener('dragleave', () => drop.classList.remove('dragover'));
-  drop.addEventListener('drop', e => { e.preventDefault(); drop.classList.remove('dragover'); if (e.dataTransfer.files[0]) handleUpload(e.dataTransfer.files[0]); });
+  drop.addEventListener('drop', e => { e.preventDefault(); drop.classList.remove('dragover'); if (e.dataTransfer.files.length) handleUploadFiles(e.dataTransfer.files); });
 
   $$('.theme-dot').forEach(d => d.addEventListener('click', () => applyTheme(d.dataset.theme)));
 
