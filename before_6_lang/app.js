@@ -1,60 +1,18 @@
 "use strict";
 
-/* ── Space-Efficient Data Sources (Google Sheets) ─────────── */
-// Each language has 4 CSV exports from Google Sheets:
-//   gid=0  sentences.csv
-//   gid=1  words.csv  
-//   gid=2  sentence_words.csv
-//   gid=3  pos_index.json (or CSV if Sheets can't do JSON)
-//
-// Replace these placeholder URLs with your actual Google Sheets pub URLs.
-// To get a URL: File → Share → Publish to web → Select sheet/tab → CSV
-//
-// For multiple tabs in one sheet, use &gid=0, &gid=1, etc. or separate sheets.
-
-const LANG_DATA_SOURCES = {
+/* ── CSV Sources ─────────────────────────────────────────── */
+const CSV_SOURCES = {
   'DE': {
-    name: 'Deutsch',
-    sentences: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS2VCQobR8YGI0tBQWwexNYG6eEiclg2O3KQMX9CLbSVj9oX2Rx0i6fz4XFNferqY-7aApz4ivCUgKq/pub?output=csv',
-    words: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSlwssNy7fhucoeoyHYNNsXs7AiZs_EsLUmq-Hpc6s20iDk2LbVWjd_08Bb1wX367G1yznL1LGv9Xb8/pub?output=csv',
-    sentenceWords: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vT0cjsmE38l96p-VEqMATnN25t2hhTKN2S3No6Y4Kbj0Q3RkW3bgcZZ3FAkDrinAUIEc_4qxpeQezl1/pub?output=csv',
-    posIndex: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vR2gYPs4Q_lR_dBiVzZSAsgbvyhcCHkCzP2UjB3vVafv1M2Jmc8nKrrMKNMb462T6z1FMUzuJ6E466l/pub?output=csv',
-  },
-  'ES': {
-    name: 'Español',
-    sentences: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRKNbx_l2zcMpAS0YN2k7JXg8hM_ENMM4eYKcxvYpeEAHxmEGJLEMRl-Y31ZNHU4WSQ0VOEPBtzil1d/pub?output=csv',
-    words: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSQtbrJWCNQBAPGOUu5ej3RkooGphJ2IpjohDJAzrWxwpnAGvPeAVg0pqynwdYxQFwvhz8YT3bC0Tlo/pub?output=csv',
-    sentenceWords: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTAxcVfOqjOdotbyQzwxmXFvZGptJsNcBrllI7miz_tKdWhb_oWsJ2osna7fmsHKUea2vIkaIIE-m4s/pub?output=csv',
-    posIndex: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRAMrTiGWInXN9e7v9H3T4-qUimdQ9aQQk74T2aaDcWzKJq9835EKqPecPO5G6FeU5A6CHEWutq45oi/pub?output=csv',
-  },
-  'FR': {
-    name: 'French',
-    sentences: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vREPLACE_FR_SENTENCES/pub?output=csv',
-    words: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vREPLACE_FR_WORDS/pub?output=csv',
-    sentenceWords: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vREPLACE_FR_SW/pub?output=csv',
-    posIndex: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vREPLACE_FR_POS/pub?output=csv',
-  },
-  'IT': {
-    name: 'Italian',
-    sentences: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vREPLACE_IT_SENTENCES/pub?output=csv',
-    words: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vREPLACE_IT_WORDS/pub?output=csv',
-    sentenceWords: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vREPLACE_IT_SW/pub?output=csv',
-    posIndex: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vREPLACE_IT_POS/pub?output=csv',
-  },
-  'PL': {
-    name: 'Polish',
-    sentences: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vREPLACE_PL_SENTENCES/pub?output=csv',
-    words: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vREPLACE_PL_WORDS/pub?output=csv',
-    sentenceWords: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vREPLACE_PL_SW/pub?output=csv',
-    posIndex: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vREPLACE_PL_POS/pub?output=csv',
-  },
-  'PT': {
-    name: 'Português',
-    sentences: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vREPLACE_PT_SENTENCES/pub?output=csv',
-    words: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vREPLACE_PT_WORDS/pub?output=csv',
-    sentenceWords: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vREPLACE_PT_SW/pub?output=csv',
-    posIndex: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vREPLACE_PT_POS/pub?output=csv',
-  },
+    url: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSN8-Nly4SsV-gUimGWZ2A6BUxO0_WqfBrgoYMXyVNWOYqjGZZB1L_6rLMsbCE9Z9JKwAtyFacksbs7/pub?output=csv',
+    version: 2
+  }
+};
+
+// Language to source mapping for future expansion
+const LANG_SOURCE_MAP = {
+  'DE': 'DE',
+  // 'FR': 'FR', // Add when French source is available
+  // 'ES': 'ES', // Add when Spanish source is available
 };
 
 /* ── State ──────────────────────────────────────────────── */
@@ -300,56 +258,113 @@ function parseCSV(text) {
     .filter(r => r.language && r.level && r.english && r.translation && r.category);
 }
 
-/* ── Space-Efficient Load ───────────────────────────────── */
-async function loadLanguageData(lang) {
-  const config = LANG_DATA_SOURCES[lang];
-  if (!config) throw new Error(`No data source for ${lang}`);
+/* ── Load CSV with XMLHttpRequest for progress ──────────── */
+function loadCSVWithProgress(url, source, onProgress) {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('GET', url, true);
 
-  setLoadStatus(`Loading ${config.name}...`);
+    let dotCount = 0;
+    let dotInterval = null;
 
+    function startDotAnimation(baseMsg) {
+      if (dotInterval) clearInterval(dotInterval);
+      dotInterval = setInterval(() => {
+        dotCount = (dotCount + 1) % 10;
+        const dots = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'][dotCount];
+        onProgress(baseMsg + ' ' + dots);
+      }, 80);
+    }
+
+    function stopDotAnimation() {
+      if (dotInterval) {
+        clearInterval(dotInterval);
+        dotInterval = null;
+      }
+    }
+
+    xhr.onloadstart = () => {
+      startDotAnimation('Downloading Lexloom ' + source);
+    };
+
+    xhr.onload = () => {
+      stopDotAnimation();
+      if (xhr.status >= 200 && xhr.status < 300) {
+        resolve(xhr.responseText);
+      } else {
+        reject(new Error(`HTTP ${xhr.status}`));
+      }
+    };
+
+    xhr.onerror = () => {
+      stopDotAnimation();
+      reject(new Error('Network error'));
+    };
+    xhr.ontimeout = () => {
+      stopDotAnimation();
+      reject(new Error('Timeout'));
+    };
+
+    xhr.send();
+  });
+}
+
+async function loadCSV(url, source) {
   try {
-    // Load via SpaceEfficientLoader (fetches from Google Sheets URLs)
-    await SpaceEfficientLoader.load({
-      words: config.words,
-      sentenceWords: config.sentenceWords,
-      posIndex: config.posIndex,
-    }, config.name);
+    const sourceConfig = CSV_SOURCES[source];
+    const currentVersion = sourceConfig ? sourceConfig.version : 1;
 
-    // Load sentences CSV
-    setLoadStatus(`Loading sentences for ${config.name}...`);
-    const resp = await fetch(config.sentences);
-    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-    const text = await resp.text();
+    // Check cache first
+    setLoadStatus(`Checking cache for ${source}...`);
+    const cached = await getCachedCSV(source);
 
-    // Check for HTML error page (Google Sheets sometimes returns HTML)
-    if (text.trim().startsWith('<')) throw new Error('got HTML, not CSV — check sharing permissions');
+    if (cached && cached.version === currentVersion) {
+      let cacheDotCount = 0;
+      const cacheSpinner = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
+      let cacheDotInterval = setInterval(() => {
+        cacheDotCount = (cacheDotCount + 1) % cacheSpinner.length;
+        setLoadStatus('Loading Lexloom ' + source + ' from cache ' + cacheSpinner[cacheDotCount]);
+      }, 80);
+      await new Promise(r => setTimeout(r, 0));
+
+      const rows = parseCSV(cached.text);
+      clearInterval(cacheDotInterval);
+      if (!rows.length) throw new Error('no rows in cached data');
+
+      S.allRows = rows;
+      setLoadStatus(`Loaded ${rows.length.toLocaleString()} cards from cache`);
+      afterLoad();
+      setTimeout(hideLoadStatus, 2000);
+      return;
+    }
+
+    // Download with progress
+    const text = await loadCSVWithProgress(url, source, msg => {
+      setLoadStatus(msg);
+    });
+
+    if (text.trim().startsWith('<')) throw new Error('got HTML, not CSV');
 
     let parseDotCount = 0;
     const spinner = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
     let parseDotInterval = setInterval(() => {
       parseDotCount = (parseDotCount + 1) % spinner.length;
-      setLoadStatus(`Parsing ${config.name} ` + spinner[parseDotCount]);
+      setLoadStatus('Parsing rows ' + spinner[parseDotCount]);
     }, 80);
 
-    await new Promise(r => setTimeout(r, 50));
+    // Give browser time to show spinner before synchronous parsing
+    await new Promise(r => setTimeout(r, 200));
 
-    const sentences = SpaceEfficientLoader.parseCSV(text);
-    clearInterval(parseDotInterval);
+    const rows = parseCSV(text);
+    if (!rows.length) throw new Error('no rows');
 
-    if (!sentences.length) throw new Error('no sentences');
+    // Keep spinner visible briefly after parsing
+    await new Promise(r => setTimeout(r, 300));
+    if (parseDotInterval) clearInterval(parseDotInterval);
+    await setCachedCSV(source, text, currentVersion);
 
-    // Merge sentence data with word lookups
-    S.allRows = sentences.map((row, idx) => {
-      const sid = parseInt(row.sentence_id !== undefined ? row.sentence_id : idx);
-      const wordData = SpaceEfficientLoader.getWordData(sid);
-      return {
-        ...row,
-        language: lang,
-        word_data: wordData.length ? JSON.stringify(wordData) : '[]',
-      };
-    });
-
-    setLoadStatus(`Loaded ${S.allRows.length.toLocaleString()} sentences for ${config.name}`);
+    S.allRows = rows;
+    setLoadStatus(`Loaded ${rows.length.toLocaleString()} cards`);
     afterLoad();
     setTimeout(hideLoadStatus, 2000);
 
@@ -358,12 +373,6 @@ async function loadLanguageData(lang) {
     setTimeout(hideLoadStatus, 4000);
     throw e;
   }
-}
-
-// Backward compat: loadCSV now delegates to loadLanguageData
-async function loadCSV(url, source) {
-  // source is now the language code directly
-  return loadLanguageData(source);
 }
 
 function setLoadStatus(msg) {
@@ -391,19 +400,26 @@ async function handleLanguageChange(newLang) {
   const oldLang = S.lang;
   S.lang = newLang;
 
-  // Check if we need to load new language data
-  if (newLang !== 'All' && LANG_DATA_SOURCES[newLang] && newLang !== oldLang) {
+  // Check if we need to load a different source
+  const newSource = LANG_SOURCE_MAP[newLang];
+
+  if (newSource && newSource !== S.source && CSV_SOURCES[newSource]) {
+    // Need to load new source for this language
+    S.source = newSource;
     try {
-      await loadLanguageData(newLang);
+      await loadCSV(CSV_SOURCES[newSource].url, newSource);
+      // After loading, apply the language filter
       applyFilters();
       buildPool();
       renderCard();
     } catch (err) {
       console.error(err);
-      S.lang = oldLang;
-      alert('Failed to load data for ' + newLang);
+      S.lang = oldLang; // Revert on failure
+      S.source = LANG_SOURCE_MAP[oldLang] || S.source;
+      alert('Failed to load source for ' + newLang);
     }
   } else {
+    // Same source, just filter
     applyFilters();
     buildPool();
     renderCard();
@@ -415,15 +431,16 @@ async function handleLanguageChange(newLang) {
 
 /* ── Filters ─────────────────────────────────────────────── */
 function buildLangDropdown() {
-  const langs = ['All', ...Object.keys(LANG_DATA_SOURCES)];
+  const langs = ['All', ...new Set(S.allRows.map(r => r.language))].filter(Boolean);
+  const options = langs.length === 1 ? langs : langs;
   const current = S.lang;
-  makeDropdown('lang-dropdown', langs, current, val => {
+  makeDropdown('lang-dropdown', options, current, val => {
     handleLanguageChange(val);
   });
   // Mobile version
   const mobileLang = $('lang-dropdown-mobile');
   if (mobileLang) {
-    makeDropdown('lang-dropdown-mobile', langs, current, val => {
+    makeDropdown('lang-dropdown-mobile', options, current, val => {
       handleLanguageChange(val);
     });
   }
@@ -1539,10 +1556,10 @@ function attachEvents() {
   $('reveal-btn').addEventListener('click', revealCard);
 
   function getFlipLabel() {
-    const langName = (S.lang && S.lang !== 'All') ? (LANG_DATA_SOURCES[S.lang]?.name || S.lang) : 'Target';
-    if (S.creatorFlip === false) return `EN → ${langName}`;
-    if (S.creatorFlip === true) return `EN ← ${langName}`;
-    return `EN ⇄ ${langName}`;
+    const lang = (S.lang && S.lang !== 'All') ? S.lang : 'Target';
+    if (S.creatorFlip === false) return `EN → ${lang}`;
+    if (S.creatorFlip === true) return `EN ← ${lang}`;
+    return `EN ⇄ ${lang}`;
   }
 
   $('flip-btn').addEventListener('click', () => {
@@ -1583,8 +1600,5 @@ document.addEventListener('DOMContentLoaded', () => {
     b.classList.toggle('active', b.dataset.font === S.fontFamily);
   });
 
-  // Load default language (DE)
-  const defaultLang = S.lang || 'DE';
-  S.lang = defaultLang;
-  loadLanguageData(defaultLang);
+  loadCSV(CSV_SOURCES[S.source].url, S.source);
 });
