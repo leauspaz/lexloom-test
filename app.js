@@ -475,7 +475,7 @@ async function loadLanguageData(lang) {
     }
 
     // 4. Parse word data into SpaceEfficientLoader
-    setLoadStatus(`Parsing ${config.name} dictionary...`);
+    setLoadStatus(`Parsing ${config.name} dictionary.`);
     await new Promise(r => setTimeout(r, 10)); // let UI update
 
     SpaceEfficientLoader.wordsCache.clear();
